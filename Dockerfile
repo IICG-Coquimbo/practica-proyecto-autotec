@@ -1,5 +1,7 @@
+# Imagen base: Jupyter + PySpark + Python
 FROM jupyter/pyspark-notebook:latest
 
+# Cambia al usuario administrador (root) para poder instalar programas
 USER root
 
 # 1. Instalar dependencias base y configurar el repo de Google Chrome
@@ -7,7 +9,7 @@ RUN apt-get update && apt-get install -y wget gnupg2 curl && \
     wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
     echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
 
-# 2. Instalar Google Chrome y librer as de soporte
+# 2. Instalar la última versión estable de Google Chrome y librerías de soporte
 RUN apt-get update && apt-get install -y \
     google-chrome-stable \
     libnss3 \
@@ -15,7 +17,8 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 3. Instalar librer as de Python (incluyendo el manager de drivers)
+# 3. Instalar librerías de Python necesarias (incluyendo el manager de drivers)
 RUN pip install selenium pymongo webdriver-manager
 
+# Vuelve al usuario normal de Jupyter (buena práctica de seguridad)
 USER jovyan
