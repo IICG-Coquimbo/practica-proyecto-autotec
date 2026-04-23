@@ -9,7 +9,7 @@ services:
     volumes:
       - .:/home/jovyan/work
     environment:
-      JUPYTER_ENABLE_LAB: "yes"
+      - JUPYTER_ENABLE_LAB=yes
     dns:
       - 8.8.8.8
     user: root
@@ -23,9 +23,9 @@ services:
     ports:
       - "8081:8081"   # Mongo Express
     environment:
-      ME_CONFIG_MONGODB_URL: mongodb+srv://neiel_cortes:neiel0330@cluster0.eo0kyfv.mongodb.net/AutoTec_db?retryWrites=true&w=majority
-      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
-      VC_NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      - ME_CONFIG_MONGODB_URL=mongodb+srv://neiel_cortes:neiel0330@cluster0.eo0kyfv.mongodb.net/AutoTec_db?appName=Cluster0
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - VC_NODE_TLS_REJECT_UNAUTHORIZED=0
     dns:
       - 8.8.8.8
     restart: always
@@ -40,6 +40,13 @@ services:
     volumes:
       - .:/srv
     restart: always
+    networks:
+      - bigdata_net
+
+networks:
+  bigdata_net:
+    driver: bridge
+    name: BigData_Network_UCN
     networks:
       - bigdata_net
 
