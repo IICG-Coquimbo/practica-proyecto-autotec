@@ -1,146 +1,141 @@
 def ejecutar_extraccion():
 
-    # --- PASO 0: LIMPIEZA TOTAL Y REPARACIÓN ---
     import os
     import time
-    from pymongo import MongoClient
+    import re
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
 
-    # Cierra procesos viejos que hayan quedado abiertos
+    # --- LIMPIEZA ---
     os.system("pkill -9 chrome")
     os.system("pkill -9 chromedriver")
     os.system("rm -rf /tmp/.com.google.Chrome.*")
     os.system("rm -rf /tmp/.org.chromium.Chromium.*")
-    print("🧹 Limpieza de procesos y temporales completada.")
 
-    # --- VARIABLES GENERALES ---
-    NOMBRE_GRUPO = "AutoTec"
-    USUARIO = "daniela"
+    print("🧹 limpieza realizada")
+
     lista_autos = []
     driver = None
 
-    # --- PASO 1: CONFIGURACIÓN DEL NAVEGADOR ---
+    NOMBRE_GRUPO = "autotec"
+    USUARIO = "dani"
+
+    # --- NAVEGADOR ---
     options = Options()
     options.binary_location = "/usr/bin/google-chrome"
-
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--disable-software-rasterizer")
     options.add_argument("--window-size=1920,1080")
-    options.add_argument("--remote-debugging-port=9222")
     options.add_argument("--headless=new")
-
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
 
     try:
         driver = webdriver.Chrome(options=options)
-        print("✅ Navegador iniciado correctamente.")
+        print("✅ navegador iniciado")
 
-        limite_paginas = 5
+        for pagina in range(5):
 
-        for nivel_pagina in range(limite_paginas):
-            if nivel_pagina == 0:
-                url_pagina = "https://www.yapo.cl/autos-usados"
-            else:
-                url_pagina = f"https://www.yapo.cl/autos-usados.{nivel_pagina + 1}"
+            url = "https://www.yapo.cl/autos-usados" if pagina == 0 else f"https://www.yapo.cl/autos-usados.{pagina + 1}"
+            driver.get(url)
 
-            driver.get(url_pagina)
-            print(f"--- Procesando Página {nivel_pagina + 1} ---")
-            print(f"URL actual: {url_pagina}")
+            print(f"📄 procesando página {pagina + 1}")
+            time.sleep(8)
 
-            time.sleep(10)
-
-            WebDriverWait(driver, 20).until(
+            bloques = WebDriverWait(driver, 20).until(
                 EC.presence_of_all_elements_located(
                     (By.CSS_SELECTOR, "a.d3-ad-tile__description")
                 )
             )
 
-            bloques = driver.find_elements(
-                By.CSS_SELECTOR, "a.d3-ad-tile__description"
-            )
-
-            print(f"Autos encontrados en página {nivel_pagina + 1}: {len(bloques)}")
-
             for bloque in bloques:
                 try:
                     nombre = bloque.find_element(
                         By.CSS_SELECTOR, "span.d3-ad-tile__title"
-                    ).text
+                    ).text.lower().strip()
 
+                    partes = nombre.split()
+                    marca = partes[0] if len(partes) > 0 else ""
+                    modelo = " ".join(partes[1:]) if len(partes) > 1 else ""
+
+                    # --- precio ---
                     try:
-                        precio = bloque.find_element(
+                        precio_elemento = bloque.find_element(
                             By.CSS_SELECTOR, "div.d3-ad-tile__price"
-                        ).text
-                    except:
-                        precio = "0"
+                        )
 
+                        precio_texto = driver.execute_script(
+                            "return arguments[0].childNodes[0].textContent;",
+                            precio_elemento
+                        ).strip()
+
+                    except:
+                        precio_texto = ""
+
+                    numeros = re.findall(r"\d+", precio_texto)
+                    precio = int("".join(numeros)) if numeros else None
+
+                    # --- ciudad ---
                     try:
-                        ubicacion = bloque.find_element(
+                        ciudad = bloque.find_element(
                             By.CSS_SELECTOR, "div.d3-ad-tile__location"
-                        ).text
+                        ).text.lower().strip()
                     except:
-                        ubicacion = ""
+                        ciudad = ""
 
-                    link = bloque.get_attribute("href")
+                    # --- url ---
+                    url_auto = bloque.get_attribute("href")
+
+                    # --- detalles ---
+                    detalles = bloque.find_elements(
+                        By.CSS_SELECTOR, "li.d3-ad-tile__details-item"
+                    )
+
+                    año = ""
+                    kilometraje = ""
+                    combustible = ""
+
+                    for d in detalles:
+                        texto = d.text.lower().strip()
+
+                        if texto.isdigit() and len(texto) == 4:
+                            año = texto
+                        elif "km" in texto:
+                            kilometraje = texto
+                        elif texto in [
+                            "bencina", "diesel", "diésel",
+                            "hibrido", "híbrido",
+                            "electrico", "eléctrico"
+                        ]:
+                            combustible = texto
 
                     lista_autos.append({
-                        "identificador": nombre,
-                        "valor": precio,
-                        "ubicacion": ubicacion,
-                        "url": link,
+                        "marca": marca,
+                        "modelo": modelo,
+                        "año": año,
+                        "kilometraje": kilometraje,
+                        "combustible": combustible,
+                        "ciudad": ciudad,
+                        "url": url_auto,
+                        "precio": precio,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO
                     })
-                except:
+
+                except Exception as e:
+                    print("⚠️ error:", e)
                     continue
 
-        print(f"✅ Extracción terminada: {len(lista_autos)} autos.")
+        print(f"✅ autos extraidos: {len(lista_autos)}")
 
     except Exception as e:
-        print(f"❌ Error en Selenium: {e}")
+        print("❌ error selenium:", e)
 
     finally:
-        if driver is not None:
-            try:
-                driver.quit()
-            except:
-                pass
+        if driver:
+            driver.quit()
 
-    # 🔥 MONGO (lo dejamos igual como pediste)
-    try:
-        client = MongoClient("mongodb", 27017, serverSelectionTimeoutMS=5000)
-        db = client["proyecto_bigdata"]
-        coleccion = db["YapoAutos"]
-
-        if lista_autos:
-            for d in lista_autos:
-                v_limpio = (
-                    str(d["valor"])
-                    .replace("$", "")
-                    .replace(".", "")
-                    .replace(",", "")
-                    .strip()
-                )
-                d["valor"] = float(v_limpio) if v_limpio.isdigit() else 0.0
-
-            coleccion.insert_many(lista_autos)
-            print("✅ Datos cargados en MongoDB correctamente.")
-        else:
-            print("⚠️ No hay datos para guardar.")
-
-    except Exception as e:
-        print(f"❌ Error en MongoDB: {e}")
-
-    # 🔥 ESTO ES CLAVE
     return lista_autos
