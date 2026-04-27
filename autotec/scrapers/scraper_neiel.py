@@ -117,7 +117,7 @@ def ejecutar_extraccion():
                     precio = limpiar_numero(precio_txt)
 
                     auto = {
-                        "identificador": nombre.strip(),
+                     #  "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
                         "anio": limpiar_numero(anio),
