@@ -1,4 +1,13 @@
 services:
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    restart: always
+    networks:
+      - bigdata_net
   workspace:
     build: .
     container_name: BigData_workspace
@@ -23,9 +32,8 @@ services:
     ports:
       - "8081:8081"   # Mongo Express
     environment:
-      - ME_CONFIG_MONGODB_URL=mongodb+srv://neiel_cortes:neiel0330@cluster0.eo0kyfv.mongodb.net/AutoTec_db?appName=Cluster0
+      - ME_CONFIG_MONGODB_SERVER=mongodb
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
-      - VC_NODE_TLS_REJECT_UNAUTHORIZED=0
     dns:
       - 8.8.8.8
     restart: always
