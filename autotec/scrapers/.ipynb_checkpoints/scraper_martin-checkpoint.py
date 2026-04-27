@@ -8,6 +8,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from pymongo import MongoClient
+
+NOMBRE_GRUPO = "AutoTec"
+USUARIO = "Martin"
+
+def limpiar_numero(texto):
+    if not texto:
+        return 0
+    limpio = re.sub(r"[^\d]", "", str(texto))
+    return int(limpio) if limpio else 0
 
 def ejecutar_extraccion():
     URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/page/"
@@ -21,14 +31,14 @@ def ejecutar_extraccion():
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    print("Navegador iniciado correctamente.")
+    print("🌐 Navegador iniciado correctamente.")
 
     try:
         limite_paginas = 3
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
-            print(f"Procesando Página {nivel_pagina}")
+            print(f"📄 Procesando Página {nivel_pagina}")
             driver.get(url_pagina)
             time.sleep(5)
 
@@ -42,22 +52,30 @@ def ejecutar_extraccion():
 
             for tarjeta in tarjetas:
                 try:
-                    bloque = tarjeta.find_element(By.CSS_SELECTOR, "div.title.heading-font a.rmv_txt_drctn")
-                    url = bloque.get_attribute("href")
+                    enlace = tarjeta.find_element(By.CSS_SELECTOR, "div.title.heading-font a.rmv_txt_drctn")
+                    url_auto = enlace.get_attribute("href")
+                    nombre = enlace.get_attribute("title") or enlace.text.strip()
 
                     valores = tarjeta.find_elements(By.CSS_SELECTOR, "div.value")
-                    marca = modelo = anio = kilometraje = combustible = transmision = ""
+                    marca = modelo = anio = kilometraje_txt = combustible = ""
 
                     for v in valores:
-                        texto = v.text.strip().upper()
-                        if "KM" in texto or "KMS" in texto:
-                            kilometraje = texto
+                        texto = v.text.strip()
+                        texto_upper = texto.upper()
+                        if "KM" in texto_upper or "KMS" in texto_upper:
+                            kilometraje_txt = texto
                         elif texto.isdigit() and len(texto) == 4:
                             anio = texto
-                        elif texto in ["GASOLINA", "DIESEL", "HIBRIDO"]:
-                            combustible = texto
-                        elif texto in ["MECANICO", "AUTOMATICO"]:
-                            transmision = texto
+                        elif any(x in texto_upper for x in ["DIESEL", "DIÉSEL", "TDI", "HDI", "CRDI"]):
+                            combustible = "Diesel"
+                        elif any(x in texto_upper for x in ["ELECTRICO", "ELÉCTRICO", "EV"]):
+                            combustible = "Eléctrico"
+                        elif any(x in texto_upper for x in ["HIBRIDO", "HÍBRIDO", "HYBRID"]):
+                            combustible = "Híbrido"
+                        elif any(x in texto_upper for x in ["BENCINA", "GASOLINA"]):
+                            combustible = "Bencina"
+                        elif any(x in texto_upper for x in ["GAS", "GNC", "GLP"]):
+                            combustible = "Gas"
                         else:
                             if not marca:
                                 marca = texto
@@ -68,37 +86,41 @@ def ejecutar_extraccion():
                         ciudad_elemento = tarjeta.find_element(By.CSS_SELECTOR, "div.stm-tooltip-link")
                         ciudad = ciudad_elemento.text.strip()
                     except:
-                        ciudad = ""
+                        ciudad = "No especificado"
 
                     precio_elementos = tarjeta.find_elements(By.CSS_SELECTOR, "span.heading-font")
-                    precio = precio_elementos[0].text.strip() if precio_elementos else "Consultar"
+                    precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
 
-                    precio_limpio = re.sub(r'\D', '', precio)
-                    km_limpio = re.sub(r'\D', '', kilometraje)
-
-                    lista_autos.append({
+                    auto = {
+                        "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "anio": anio,
-                        "kilometraje": int(km_limpio) if km_limpio else 0,
-                        "combustible": combustible,
+                        "anio": limpiar_numero(anio),
+                        "kilometraje": limpiar_numero(kilometraje_txt),
+                        "combustible": combustible if combustible else "No especificado",
                         "ciudad": ciudad,
-                        "url": url,
-                        "precio": float(precio_limpio) if precio_limpio else 0.0,
-                        "usuario": "Martin",
+                        "url": url_auto,
+                        "precio": limpiar_numero(precio_txt),
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        "grupo": "AutoTec"
-                    })
+                        "grupo": NOMBRE_GRUPO,
+                        "usuario": USUARIO
+                    }
+
+                    lista_autos.append(auto)
 
                 except Exception:
                     continue
 
-        print(f"Extracción terminada: {len(lista_autos)} vehículos.")
+        print(f"✅ Extracción terminada: {len(lista_autos)} vehículos.")
         return lista_autos
 
     except Exception as e:
-        print(f"Error en Selenium: {e}")
+        print(f"❌ Error en Selenium: {e}")
         return []
 
     finally:
         driver.quit()
+
+
+
+
