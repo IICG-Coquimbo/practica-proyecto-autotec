@@ -34,7 +34,7 @@ def ejecutar_extraccion():
     print("🌐 Navegador iniciado correctamente.")
 
     try:
-        limite_paginas = 3
+        limite_paginas = 8  # 👈 ahora recorre 8 páginas
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
@@ -57,7 +57,7 @@ def ejecutar_extraccion():
                     nombre = enlace.get_attribute("title") or enlace.text.strip()
 
                     valores = tarjeta.find_elements(By.CSS_SELECTOR, "div.value")
-                    marca = modelo = anio = kilometraje_txt = combustible = ""
+                    marca = modelo = year = kilometraje_txt = combustible = ""
 
                     for v in valores:
                         texto = v.text.strip()
@@ -65,7 +65,7 @@ def ejecutar_extraccion():
                         if "KM" in texto_upper or "KMS" in texto_upper:
                             kilometraje_txt = texto
                         elif texto.isdigit() and len(texto) == 4:
-                            anio = texto
+                            year = texto
                         elif any(x in texto_upper for x in ["DIESEL", "DIÉSEL", "TDI", "HDI", "CRDI"]):
                             combustible = "Diesel"
                         elif any(x in texto_upper for x in ["ELECTRICO", "ELÉCTRICO", "EV"]):
@@ -95,7 +95,7 @@ def ejecutar_extraccion():
                         "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "anio": limpiar_numero(anio),
+                        "year": limpiar_numero(year),  # 👈 cambiado de anio a year
                         "kilometraje": limpiar_numero(kilometraje_txt),
                         "combustible": combustible if combustible else "No especificado",
                         "ciudad": ciudad,
@@ -106,6 +106,7 @@ def ejecutar_extraccion():
                         "usuario": USUARIO
                     }
 
+                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
@@ -120,6 +121,7 @@ def ejecutar_extraccion():
 
     finally:
         driver.quit()
+
 
 
 
