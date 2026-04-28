@@ -15,33 +15,10 @@ FECHA = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 META = 500
 URL_BASE = "https://automoviles.emol.com/venta/autos-usados"
 
-# ================= SELENIUM =================
-
-options = Options()
-options.binary_location = "/usr/bin/google-chrome"
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1920,1080")
-
-driver = webdriver.Chrome(options=options)
-
-# ================= MONGO =================
-
-client = MongoClient("mongodb://mongodb:27017/")
-db = client["proyecto_bigdata"]
-coleccion = db["AutoTec"]
-
-# limpiar datos anteriores
-coleccion.delete_many({"usuario": NOMBRE})
-
-print("Conexión exitosa a MongoDB")
-print("Iniciando scraping...")
-
 # ================= FUNCIONES =================
 
 def limpiar_numero(texto):
-    return int(re.sub(r"[^\d]", "", texto)) if texto else None
+    return int(re.sub(r"[^\d]", "", texto)) if texto else 0
 
 def separar_marca_modelo(titulo):
     partes = titulo.split()
@@ -52,88 +29,138 @@ def separar_marca_modelo(titulo):
 def extraer_info(info):
     partes = [p.strip() for p in info.split("|")]
 
-    anio = int(re.search(r"\d{4}", partes[0]).group()) if len(partes) > 0 else None
+    year = None
+    if len(partes) > 0:
+        match_year = re.search(r"\d{4}", partes[0])
+        if match_year:
+            year = int(match_year.group())
+
     km = limpiar_numero(partes[1]) if len(partes) > 1 else 0
     combustible = partes[2] if len(partes) > 2 else "No disponible"
     ciudad = partes[3] if len(partes) > 3 else "No disponible"
 
-    return anio, km, combustible, ciudad
+    return year, km, combustible, ciudad
 
-# ================= SCRAPING =================
+# ================= FUNCIÓN PRINCIPAL =================
 
-total = 0
-pagina = 1
-links_vistos = set()
+def ejecutar_extraccion():
 
-while total < META:
+    total = 0
+    pagina = 1
+    links_vistos = set()
+    datos_finales = []
 
-    url = f"{URL_BASE}?p={pagina}"
-    driver.get(url)
-    time.sleep(2)
+    # ================= SELENIUM =================
+    options = Options()
+    options.binary_location = "/usr/bin/google-chrome"
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
 
-    autos = driver.find_elements(By.CSS_SELECTOR, "article.search-result.row")
+    driver = webdriver.Chrome(options=options)
 
-    if len(autos) == 0:
-        print(f"Página {pagina} sin resultados")
-        break
+    print("Iniciando scraping...")
 
-    guardados_pagina = 0
+    try:
+        while total < META:
 
-    for auto in autos:
+            url = f"{URL_BASE}?p={pagina}"
+            driver.get(url)
+            time.sleep(3)
 
-        if total >= META:
-            break
+            autos = driver.find_elements(By.CSS_SELECTOR, "article.search-result.row")
 
-        try:
-            precio = limpiar_numero(auto.find_element(By.TAG_NAME, "h4").text)
-            titulo = auto.find_element(By.TAG_NAME, "h3").text
-            info = auto.find_element(By.TAG_NAME, "p").text
-            link = auto.find_element(By.CSS_SELECTOR, "a.ga").get_attribute("href")
+            if len(autos) == 0:
+                print(f"Página {pagina} sin resultados")
+                break
 
-            if link in links_vistos:
-                continue
+            guardados_pagina = 0
 
-            marca, modelo = separar_marca_modelo(titulo)
-            anio, km, combustible, ciudad = extraer_info(info)
+            for auto in autos:
 
-            if not all([marca, modelo, anio, combustible, ciudad, precio, link]):
-                continue
+                if total >= META:
+                    break
 
-            identificador = link.split("cod")[-1].replace(".html", "")
+                try:
+                    precio = limpiar_numero(auto.find_element(By.TAG_NAME, "h4").text)
+                    titulo = auto.find_element(By.TAG_NAME, "h3").text
+                    info = auto.find_element(By.TAG_NAME, "p").text
+                    link = auto.find_element(By.CSS_SELECTOR, "a.ga").get_attribute("href")
 
-            dato = {
-                "identificador": identificador,
-                "marca": marca,
-                "modelo": modelo,
-                "anio": anio,
-                "kilometraje": km,
-                "combustible": combustible,
-                "ciudad": ciudad,
-                "url": link,
-                "precio": precio,
-                "usuario": NOMBRE,
-                "fecha_captura": FECHA,
-                "grupo": GRUPO
-            }
+                    if link in links_vistos:
+                        continue
 
-            coleccion.update_one(
-                {"url": link, "usuario": NOMBRE},
-                {"$set": dato},
-                upsert=True
-            )
+                    marca, modelo = separar_marca_modelo(titulo)
+                    year, km, combustible, ciudad = extraer_info(info)
 
-            links_vistos.add(link)
-            total += 1
-            guardados_pagina += 1
+                    # VALIDACIÓN CORRECTA
+                    if (
+                        not marca or
+                        not modelo or
+                        not year or
+                        km == 0 or
+                        combustible == "No disponible" or
+                        ciudad == "No disponible" or
+                        not precio or
+                        not link
+                    ):
+                        continue
 
-        except:
-            continue
+                    dato = {
+                        "marca": marca,
+                        "modelo": modelo,
+                        "year": year,
+                        "kilometraje": km,
+                        "combustible": combustible,
+                        "ciudad": ciudad,
+                        "url": link,
+                        "precio": precio,
+                        "usuario": NOMBRE,
+                        "fecha_captura": FECHA,
+                        "grupo": GRUPO
+                    }
 
-    print(f"Página {pagina} | Guardados: {guardados_pagina} | Total: {total}/{META}")
+                    # GUARDADO EN MONGO
+                    coleccion.update_one(
+                        {"url": link, "usuario": NOMBRE},
+                        {"$set": dato},
+                        upsert=True
+                    )
 
-    pagina += 1
+                    datos_finales.append(dato)
+                    links_vistos.add(link)
+                    total += 1
+                    guardados_pagina += 1
 
-driver.quit()
+                except:
+                    continue
+
+            print(f"Página {pagina} | Guardados: {guardados_pagina} | Total: {total}/{META}")
+
+            pagina += 1
+
+    finally:
+        driver.quit()
+        print("Navegador cerrado.")
+
+    return datos_finales
+
+# ================= MONGO =================
+
+client = MongoClient("mongodb://mongodb:27017/")
+db = client["proyecto_bigdata"]
+coleccion = db["AutoTec"]
+
+# limpiar solo tus datos
+coleccion.delete_many({"usuario": NOMBRE})
+
+print("Conexión exitosa a MongoDB")
+
+# ================= EJECUTAR =================
+
+datos = ejecutar_extraccion()
 
 print("Scraping finalizado")
-print("Total vehículos de Luz Azocar:", coleccion.count_documents({"usuario": NOMBRE}))
+print("Total extraído:", len(datos))
+print("Total en Mongo:", coleccion.count_documents({"usuario": NOMBRE}))
