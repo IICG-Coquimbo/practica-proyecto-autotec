@@ -1,0 +1,1 @@
+from .scraper_javiera import ejecutar_extraccion
