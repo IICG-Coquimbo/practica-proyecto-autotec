@@ -48,7 +48,7 @@ def ejecutar_extraccion():
         print("🌐 Iniciando navegador...")
         driver = webdriver.Chrome(options=options)
         print("✅ Navegador iniciado.")
-        limite_paginas=3
+        limite_paginas=8
         url_inicial = "https://www.autocosmos.cl/auto/usado"
         driver.get(url_inicial)
 
@@ -78,9 +78,9 @@ def ejecutar_extraccion():
                         version = ""
 
                     try:
-                        anio = bloque.find_element(By.CSS_SELECTOR, "span.listing-card__year").text.strip()
+                        year = bloque.find_element(By.CSS_SELECTOR, "span.listing-card__year").text.strip()
                     except Exception:
-                        anio = ""
+                        year = ""
 
                     try:
                         kilometraje_txt = bloque.find_element(By.CSS_SELECTOR, "span.listing-card__km").text.strip()
@@ -117,10 +117,10 @@ def ejecutar_extraccion():
                     precio = limpiar_numero(precio_txt)
 
                     auto = {
-                        "identificador": nombre.strip(),
+                     #  "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "anio": limpiar_numero(anio),
+                        "year": limpiar_numero(year),
                         "kilometraje": kilometraje,
                         "combustible": combustible,
                         "ciudad": ciudad,
