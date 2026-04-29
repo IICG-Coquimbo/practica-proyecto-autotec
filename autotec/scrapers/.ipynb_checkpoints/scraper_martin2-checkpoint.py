@@ -19,10 +19,20 @@ def limpiar_numero(texto):
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
 
-def ejecutar_extraccion(limite_paginas=35):  # 👈 por defecto 24 páginas
+def guardar_en_mongo(lista_autos):
+    try:
+        cliente = MongoClient("mongodb://localhost:27017/")
+        db = cliente["proyecto_bigdata"]
+        coleccion = db["AutoTec"]
+        if lista_autos:
+            coleccion.insert_many(lista_autos)
+            print(f"💾 Guardados {len(lista_autos)} autos en MongoDB.")
+    except Exception as e:
+        print(f"❌ Error guardando en MongoDB: {e}")
+
+def ejecutar_extraccion(limite_paginas=1):
     URL_BASE = "https://www.difor.cl/autos-usados-chile?page="
     lista_autos = []
-    vistos = set()
 
     options = Options()
     options.add_argument("--headless=new")
@@ -38,7 +48,6 @@ def ejecutar_extraccion(limite_paginas=35):  # 👈 por defecto 24 páginas
             url_pagina = f"{URL_BASE}{nivel_pagina}"
             driver.get(url_pagina)
 
-            # Esperar a que aparezcan los enlaces de autos
             WebDriverWait(driver, 15).until(
                 EC.presence_of_all_elements_located((By.XPATH, "//a[@id='product-card-link']"))
             )
@@ -47,7 +56,6 @@ def ejecutar_extraccion(limite_paginas=35):  # 👈 por defecto 24 páginas
 
             for tarjeta in tarjetas:
                 try:
-                    # URL única del auto
                     href = tarjeta.get_attribute("href")
                     url_auto = "https://www.difor.cl" + href if href.startswith("/") else href
 
@@ -59,64 +67,65 @@ def ejecutar_extraccion(limite_paginas=35):  # 👈 por defecto 24 páginas
                         modelo = " ".join(partes[1:-1]) if len(partes) > 2 else "No especificado"
                         year = limpiar_numero(partes[-1]) if partes and partes[-1].isdigit() else 0
                     except:
+                        titulo = "No especificado"
                         marca = modelo = "No especificado"
                         year = 0
 
-                    # Precio final (primer bloque body2, ignorando bono)
+                    # Precio
                     try:
                         precio_txt = tarjeta.find_element(By.XPATH, ".//p[contains(@class,'MuiTypography-body2')]").text.strip()
                         precio = limpiar_numero(precio_txt)
                     except:
                         precio = 0
 
-                    # Bloque de detalles (km, transmisión, combustible)
+                    # Bloque de detalles (solo km y combustible)
                     kilometraje = 0
-                    transmision = "No especificado"
                     combustible = "No especificado"
                     try:
-                        spans = tarjeta.find_elements(By.XPATH, ".//div[contains(@class,'MuiBox-root') and contains(@class,'css-dmamo3')]/span")
-                        for sp in spans:
-                            txt = sp.text.strip()
-                            if "km" in txt.lower():
-                                kilometraje = limpiar_numero(txt)
-                            elif "mecánica" in txt.lower() or "automática" in txt.lower():
-                                transmision = txt
-                            elif any(c in txt.lower() for c in ["gasolina", "diesel", "híbrido", "hibrido", "eléctrico", "electrico"]):
-                                combustible = txt
+                        spans = tarjeta.find_elements(
+                            By.XPATH,
+                            ".//div[contains(@class,'MuiBox-root') and contains(@class,'css-dmamo3')]//span"
+                        )
+                        for s in spans:
+                            texto = s.text.strip().upper()
+                            if "KM" in texto or "KMS" in texto:
+                                kilometraje = limpiar_numero(s.text)
+                            elif any(x in texto for x in ["DIESEL","DIÉSEL","TDI","HDI","CRDI"]):
+                                combustible = "Diesel"
+                            elif any(x in texto for x in ["ELECTRICO","ELÉCTRICO","EV"]):
+                                combustible = "Eléctrico"
+                            elif any(x in texto for x in ["HIBRIDO","HÍBRIDO","HYBRID"]):
+                                combustible = "Híbrido"
+                            elif any(x in texto for x in ["BENCINA","GASOLINA"]):
+                                combustible = "Bencina"
+                            elif any(x in texto for x in ["GAS","GNC","GLP"]):
+                                combustible = "Gas"
                     except:
                         pass
 
-                    ciudad = "No especificado"
-
-                    identificador = f"{marca} {modelo}" if marca != "No especificado" and modelo != "No especificado" else "No especificado"
-
                     auto = {
-                        "identificador": identificador,
+                        "identificador": titulo.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "year": year,  # 👈 cambiado de anio a year
+                        "year": year,
                         "kilometraje": kilometraje,
-                        "transmision": transmision,
                         "combustible": combustible,
-                        "ciudad": ciudad,
+                        "ciudad": "No especificado",  # Difor no muestra ciudad en el card
                         "url": url_auto,
                         "precio": precio,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
-                        "usuario": USUARIO,
-                        "fuente": "Difor.cl"
+                        "usuario": USUARIO
                     }
 
-                    # Guardar evitando duplicados
-                    if auto["marca"] != "No especificado" and auto["modelo"] != "No especificado":
-                        clave = (auto["identificador"], auto["year"], auto["kilometraje"])
-                        if clave not in vistos:
-                            vistos.add(clave)
-                            lista_autos.append(auto)
+                    print(auto)   # 👈 muestra cada auto en consola
+                    lista_autos.append(auto)
 
-                except:
+                except Exception:
                     continue
 
+        print(f"✅ Extracción terminada: {len(lista_autos)} vehículos.")
+        guardar_en_mongo(lista_autos)
         return lista_autos
 
     except Exception as e:
@@ -125,6 +134,7 @@ def ejecutar_extraccion(limite_paginas=35):  # 👈 por defecto 24 páginas
 
     finally:
         driver.quit()
+
 
 
 
