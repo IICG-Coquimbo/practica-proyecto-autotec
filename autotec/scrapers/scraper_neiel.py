@@ -52,7 +52,6 @@ def ejecutar_extraccion():
         driver.get(url_inicial)
 
         for nivel_pagina in range(limite_paginas):
-            print(f"\n📄 Procesando página {nivel_pagina + 1}...")
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(3)
 

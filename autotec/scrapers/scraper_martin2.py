@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from pymongo import MongoClient
 
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
@@ -17,6 +18,17 @@ def limpiar_numero(texto):
         return 0
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
+
+def guardar_en_mongo(lista_autos):
+    try:
+        cliente = MongoClient("mongodb://localhost:27017/")
+        db = cliente["proyecto_bigdata"]
+        coleccion = db["AutoTec"]
+        if lista_autos:
+            coleccion.insert_many(lista_autos)
+            print(f"💾 Guardados {len(lista_autos)} autos en MongoDB.")
+    except Exception as e:
+        print(f"❌ Error guardando en MongoDB: {e}")
 
 def ejecutar_extraccion(limite_paginas=1):
     URL_BASE = "https://www.difor.cl/autos-usados-chile?page="
@@ -32,6 +44,7 @@ def ejecutar_extraccion(limite_paginas=1):
 
     try:
         for nivel_pagina in range(1, limite_paginas + 1):
+            print(f"📄 Procesando Página {nivel_pagina}")
             url_pagina = f"{URL_BASE}{nivel_pagina}"
             driver.get(url_pagina)
 
@@ -91,6 +104,7 @@ def ejecutar_extraccion(limite_paginas=1):
                         pass
 
                     auto = {
+                        "identificador": titulo.strip(),
                         "marca": marca,
                         "modelo": modelo,
                         "year": year,
@@ -104,12 +118,14 @@ def ejecutar_extraccion(limite_paginas=1):
                         "usuario": USUARIO
                     }
 
+                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
                     continue
 
         print(f"✅ Extracción terminada: {len(lista_autos)} vehículos.")
+        guardar_en_mongo(lista_autos)
         return lista_autos
 
     except Exception as e:
