@@ -30,7 +30,7 @@ def guardar_en_mongo(lista_autos):
     except Exception as e:
         print(f"❌ Error guardando en MongoDB: {e}")
 
-def ejecutar_extraccion(limite_paginas=1):
+def ejecutar_extraccion(limite_paginas=34):
     URL_BASE = "https://www.difor.cl/autos-usados-chile?page="
     lista_autos = []
 
@@ -67,7 +67,6 @@ def ejecutar_extraccion(limite_paginas=1):
                         modelo = " ".join(partes[1:-1]) if len(partes) > 2 else "No especificado"
                         year = limpiar_numero(partes[-1]) if partes and partes[-1].isdigit() else 0
                     except:
-                        titulo = "No especificado"
                         marca = modelo = "No especificado"
                         year = 0
 
@@ -104,7 +103,6 @@ def ejecutar_extraccion(limite_paginas=1):
                         pass
 
                     auto = {
-                        "identificador": titulo.strip(),
                         "marca": marca,
                         "modelo": modelo,
                         "year": year,
@@ -118,7 +116,7 @@ def ejecutar_extraccion(limite_paginas=1):
                         "usuario": USUARIO
                     }
 
-                    print(auto)   # 👈 muestra cada auto en consola
+                    print(auto)
                     lista_autos.append(auto)
 
                 except Exception:
@@ -135,13 +133,6 @@ def ejecutar_extraccion(limite_paginas=1):
     finally:
         driver.quit()
 
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    ejecutar_extraccion()
 

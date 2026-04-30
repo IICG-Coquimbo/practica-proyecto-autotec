@@ -54,7 +54,6 @@ def ejecutar_extraccion():
                 try:
                     enlace = tarjeta.find_element(By.CSS_SELECTOR, "div.title.heading-font a.rmv_txt_drctn")
                     url_auto = enlace.get_attribute("href")
-                    nombre = enlace.get_attribute("title") or enlace.text.strip()
 
                     valores = tarjeta.find_elements(By.CSS_SELECTOR, "div.value")
                     marca = modelo = year = kilometraje_txt = combustible = ""
@@ -92,10 +91,9 @@ def ejecutar_extraccion():
                     precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
 
                     auto = {
-                        "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "year": limpiar_numero(year),  # 👈 cambiado de anio a year
+                        "year": limpiar_numero(year),
                         "kilometraje": limpiar_numero(kilometraje_txt),
                         "combustible": combustible if combustible else "No especificado",
                         "ciudad": ciudad,
@@ -121,6 +119,7 @@ def ejecutar_extraccion():
 
     finally:
         driver.quit()
+
 
 
 
