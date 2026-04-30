@@ -75,7 +75,6 @@ options.add_argument(
     "Chrome/120.0.0.0 Safari/537.36"
 )
 
-driver = webdriver.Chrome(options=options)
 
 # =========================
 # FUNCIONES
@@ -307,7 +306,7 @@ def extraer_detalle_auto(url_auto):
             "grupo": NOMBRE_GRUPO,
             "fuente": "autos.cari.cl"
         }
-
+        
         return registro
 
     except Exception as e:
@@ -326,27 +325,36 @@ if datos_finales:
 # =========================
 # EXTRAER
 # =========================
+# =========================
+# EXTRAER
+# =========================
 def ejecutar_extraccion(max_autos=5):
     global MAX_AUTOS, datos_finales, links_vistos
-
+    driver = webdriver.Chrome(options=options)
     MAX_AUTOS = max_autos
     datos_finales = []
     links_vistos = set()
 
-    links_autos = obtener_links_autos()
+    try:
+        links_autos = obtener_links_autos()
+        print("\nTotal de links obtenidos:", len(links_autos))
 
-    print("\nTotal de links obtenidos:", len(links_autos))
+        for i, link in enumerate(links_autos, start=1):
+            if len(datos_finales) >= MAX_AUTOS:
+                break
 
-    for i, link in enumerate(links_autos, start=1):
-        if len(datos_finales) >= MAX_AUTOS:
-            break
+            registro = extraer_detalle_auto(link)
 
-        registro = extraer_detalle_auto(link)
+            if registro:
+                datos_finales.append(registro)
+            else:
+                print(f"Incompleto | Link revisado {i}/{len(links_autos)}")
 
-        if registro:
-            datos_finales.append(registro)
-        else:
-            print(f"Incompleto | Link revisado {i}/{len(links_autos)}")
+    finally:
+        # IMPORTANTE: Esto cierra el navegador y libera la memoria
+        # Pase lo que pase (aunque el código falle), el driver se cerrará.
+        print("\nCerrando navegador Selenium...")
+        driver.quit()
 
     print("\nExtracción terminada.")
     print("Total autos capturados:", len(datos_finales))
