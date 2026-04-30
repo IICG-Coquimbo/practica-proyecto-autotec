@@ -133,6 +133,4 @@ def ejecutar_extraccion(limite_paginas=34):
     finally:
         driver.quit()
 
-if __name__ == "__main__":
-    ejecutar_extraccion()
 
