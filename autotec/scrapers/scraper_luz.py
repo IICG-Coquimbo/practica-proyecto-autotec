@@ -1,7 +1,6 @@
 import time
 import re
 from datetime import datetime
-from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -121,13 +120,6 @@ def ejecutar_extraccion():
                         "grupo": GRUPO
                     }
 
-                    # GUARDADO EN MONGO
-                    coleccion.update_one(
-                        {"url": link, "usuario": NOMBRE},
-                        {"$set": dato},
-                        upsert=True
-                    )
-
                     datos_finales.append(dato)
                     links_vistos.add(link)
                     total += 1
@@ -146,21 +138,9 @@ def ejecutar_extraccion():
 
     return datos_finales
 
-# ================= MONGO =================
-
-client = MongoClient("mongodb://mongodb:27017/")
-db = client["proyecto_bigdata"]
-coleccion = db["AutoTec"]
-
-# limpiar solo tus datos
-coleccion.delete_many({"usuario": NOMBRE})
-
-print("Conexión exitosa a MongoDB")
-
 # ================= EJECUTAR =================
 
 datos = ejecutar_extraccion()
 
 print("Scraping finalizado")
 print("Total extraído:", len(datos))
-print("Total en Mongo:", coleccion.count_documents({"usuario": NOMBRE}))
