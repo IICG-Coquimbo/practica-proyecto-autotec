@@ -1,3 +1,4 @@
+# --- Importaciones necesarias ---
 import sys
 import time
 import re
@@ -5,20 +6,21 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
+# --- Variables globales ---
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
+# --- Funciones auxiliares ---
 def limpiar_numero(texto):
     if not texto:
         return 0
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
 
+# --- Función principal de extracción ---
 def ejecutar_extraccion():
     URL_BASE = "https://www.difor.cl/autos-usados-chile?page="
     lista_autos = []
@@ -33,7 +35,7 @@ def ejecutar_extraccion():
     print("🌐 Empezó extracción")
 
     try:
-        limite_paginas = 34# 👈 recorre hasta 34 páginas, pero se detiene si no hay más
+        limite_paginas = 38 # 👈 recorre hasta 34 páginas, pero se detiene si no hay más
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}"
@@ -41,8 +43,8 @@ def ejecutar_extraccion():
 
             tarjetas = driver.find_elements(By.XPATH, "//a[@id='product-card-link']")
 
-            # 🚫 Si no hay tarjetas, significa que ya no existen más páginas
             if not tarjetas:
+                # 🚫 Si no hay tarjetas, se detiene pero devuelve lo acumulado
                 break
 
             for tarjeta in tarjetas:
@@ -50,7 +52,7 @@ def ejecutar_extraccion():
                     href = tarjeta.get_attribute("href")
                     url_auto = "https://www.difor.cl" + href if href.startswith("/") else href
 
-                    # Marca, modelo, year
+                    # Marca, modelo, año
                     try:
                         titulo = tarjeta.find_element(By.XPATH, ".//p[contains(@class,'MuiTypography-body1')]").text.strip()
                         partes = titulo.split()
@@ -68,7 +70,7 @@ def ejecutar_extraccion():
                     except:
                         precio = 0
 
-                    # Bloque de detalles (solo km y combustible)
+                    # Otros detalles
                     kilometraje = 0
                     combustible = "No especificado"
                     try:
@@ -77,18 +79,17 @@ def ejecutar_extraccion():
                             txt = sp.text.strip().upper()
                             if "KM" in txt or "KMS" in txt:
                                 kilometraje = limpiar_numero(txt)
-                            elif any(x in txt for x in ["DIESEL", "DIÉSEL"]):
+                            elif "DIESEL" in txt or "DIÉSEL" in txt:
                                 combustible = "Diesel"
-                            elif any(x in txt for x in ["BENCINA", "GASOLINA"]):
+                            elif "BENCINA" in txt or "GASOLINA" in txt:
                                 combustible = "Bencina"
-                            elif any(x in txt for x in ["ELECTRICO", "ELÉCTRICO"]):
+                            elif "ELECTRICO" in txt or "ELÉCTRICO" in txt:
                                 combustible = "Eléctrico"
-                            elif any(x in txt for x in ["HIBRIDO", "HÍBRIDO", "HYBRID"]):
+                            elif "HIBRIDO" in txt or "HÍBRIDO" in txt or "HYBRID" in txt:
                                 combustible = "Híbrido"
                     except:
                         pass
 
-                    # Ciudad (no disponible en Difor, se deja fijo)
                     ciudad = "No especificado"
 
                     auto = {
@@ -114,11 +115,16 @@ def ejecutar_extraccion():
         return lista_autos
 
     except Exception as e:
+        # ⚠️ Devuelve lo acumulado aunque haya error
         print(f"❌ Error en Selenium: {e}")
-        return []
+        return lista_autos
 
     finally:
         driver.quit()
+
+
+
+
 
 
 

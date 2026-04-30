@@ -1,3 +1,4 @@
+# --- Importaciones necesarias ---
 import os
 import time
 import re
@@ -8,15 +9,18 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
+# --- Variables globales ---
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
+# --- Funciones auxiliares ---
 def limpiar_numero(texto):
     if not texto:
         return 0
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
 
+# --- Función principal de extracción ---
 def ejecutar_extraccion():
     URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/page/"
     lista_autos = []
@@ -32,7 +36,7 @@ def ejecutar_extraccion():
     print("🌐 Empezó extracción")
 
     try:
-        limite_paginas = 8  # 👈 recorre hasta 8 páginas, pero se detiene si no hay más
+        limite_paginas = 8
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
@@ -42,8 +46,8 @@ def ejecutar_extraccion():
             tarjetas = driver.find_elements(By.CSS_SELECTOR,
                 "div.listing-list-loop.stm-listing-directory-list-loop.stm-isotope-listing-item")
 
-            # 🚫 Si no hay tarjetas, significa que ya no existen más páginas
             if not tarjetas:
+                # 🚫 Si no hay tarjetas, se detiene pero devuelve lo acumulado
                 break
 
             for tarjeta in tarjetas:
@@ -109,11 +113,15 @@ def ejecutar_extraccion():
         return lista_autos
 
     except Exception as e:
+        # ⚠️ Devuelve lo acumulado aunque haya error
         print(f"❌ Error en Selenium: {e}")
-        return []
+        return lista_autos
 
     finally:
         driver.quit()
+
+
+
 
 
 
