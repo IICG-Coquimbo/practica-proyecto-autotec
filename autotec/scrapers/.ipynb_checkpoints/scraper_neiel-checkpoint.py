@@ -48,7 +48,7 @@ def ejecutar_extraccion():
         print("🌐 Iniciando navegador...")
         driver = webdriver.Chrome(options=options)
         print("✅ Navegador iniciado.")
-        limite_paginas=8
+        limite_paginas=10
         url_inicial = "https://www.autocosmos.cl/auto/usado"
         driver.get(url_inicial)
 
