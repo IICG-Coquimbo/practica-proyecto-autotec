@@ -5,8 +5,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
@@ -31,24 +29,22 @@ def ejecutar_extraccion():
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    print("🌐 Navegador iniciado correctamente.")
+    print("🌐 Empezó extracción")
 
     try:
-        limite_paginas = 8  # 👈 ahora recorre 8 páginas
+        limite_paginas = 8  # 👈 recorre hasta 8 páginas, pero se detiene si no hay más
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
-            print(f"📄 Procesando Página {nivel_pagina}")
             driver.get(url_pagina)
             time.sleep(5)
 
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR,
-                    "div.listing-list-loop.stm-listing-directory-list-loop.stm-isotope-listing-item"))
-            )
-
             tarjetas = driver.find_elements(By.CSS_SELECTOR,
                 "div.listing-list-loop.stm-listing-directory-list-loop.stm-isotope-listing-item")
+
+            # 🚫 Si no hay tarjetas, significa que ya no existen más páginas
+            if not tarjetas:
+                break
 
             for tarjeta in tarjetas:
                 try:
@@ -104,7 +100,6 @@ def ejecutar_extraccion():
                         "usuario": USUARIO
                     }
 
-                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
@@ -119,6 +114,7 @@ def ejecutar_extraccion():
 
     finally:
         driver.quit()
+
 
 
 
