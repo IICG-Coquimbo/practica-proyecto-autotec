@@ -45,7 +45,6 @@ def ejecutar_extraccion():
     )
 
     try:
-        print("🌐 Iniciando navegador...")
         driver = webdriver.Chrome(options=options)
         print("✅ Navegador iniciado.")
         limite_paginas=10

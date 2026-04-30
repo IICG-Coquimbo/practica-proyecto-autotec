@@ -79,7 +79,6 @@ def ejecutar_extraccion():
                 except Exception:
                     continue
 
-            print(f"  Acumulado total: {len(lista_autos)} autos.")
             time.sleep(2)
 
         print(f"Extraccion terminada: {len(lista_autos)} autos en total.")
@@ -164,8 +163,6 @@ def ejecutar_extraccion():
         except Exception as e:
             print(f"  Error en pagina {nivel_pagina}: {e}")
             continue
-
-        print(f"  Acumulado total: {len(lista_autos)} autos.")
         time.sleep(1)
 
     print(f"\nExtraccion terminada: {len(lista_autos)} autos en total.")

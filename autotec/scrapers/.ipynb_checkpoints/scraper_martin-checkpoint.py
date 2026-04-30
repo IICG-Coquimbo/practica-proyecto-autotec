@@ -8,7 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from pymongo import MongoClient
 
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
@@ -38,7 +37,6 @@ def ejecutar_extraccion():
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
-            print(f"📄 Procesando Página {nivel_pagina}")
             driver.get(url_pagina)
             time.sleep(5)
 
@@ -92,7 +90,6 @@ def ejecutar_extraccion():
                     precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
 
                     auto = {
-                        "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
                         "year": limpiar_numero(year),  # 👈 cambiado de anio a year
@@ -106,7 +103,6 @@ def ejecutar_extraccion():
                         "usuario": USUARIO
                     }
 
-                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
@@ -122,6 +118,9 @@ def ejecutar_extraccion():
     finally:
         driver.quit()
 
+if __name__ == "__main__":
+
+    ejecutar_extraccion()
 
 
 

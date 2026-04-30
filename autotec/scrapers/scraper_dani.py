@@ -41,7 +41,6 @@ def ejecutar_extraccion():
             url = "https://www.yapo.cl/autos-usados" if pagina == 0 else f"https://www.yapo.cl/autos-usados.{pagina + 1}"
             driver.get(url)
 
-            print(f"📄 procesando página {pagina + 1}")
             time.sleep(8)
 
             bloques = WebDriverWait(driver, 20).until(

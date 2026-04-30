@@ -1,7 +1,6 @@
 import os
 import re
 import time
-from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -334,11 +333,9 @@ def ejecutar_extraccion(max_autos=5):
     datos_finales = []
     links_vistos = set()
 
-    print("\nIniciando extracción de links...")
     links_autos = obtener_links_autos()
 
     print("\nTotal de links obtenidos:", len(links_autos))
-    print("\nIniciando extracción de detalles...")
 
     for i, link in enumerate(links_autos, start=1):
         if len(datos_finales) >= MAX_AUTOS:
@@ -348,7 +345,6 @@ def ejecutar_extraccion(max_autos=5):
 
         if registro:
             datos_finales.append(registro)
-            print(f"Capturado {len(datos_finales)}/{MAX_AUTOS} | Link revisado {i}/{len(links_autos)}")
         else:
             print(f"Incompleto | Link revisado {i}/{len(links_autos)}")
 
