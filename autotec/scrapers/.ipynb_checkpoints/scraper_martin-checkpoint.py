@@ -1,3 +1,4 @@
+# --- Importaciones necesarias ---
 import os
 import time
 import re
@@ -5,20 +6,21 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
+# --- Variables globales ---
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
+# --- Funciones auxiliares ---
 def limpiar_numero(texto):
     if not texto:
         return 0
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
 
+# --- Función principal de extracción ---
 def ejecutar_extraccion():
     URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/page/"
     lista_autos = []
@@ -31,30 +33,27 @@ def ejecutar_extraccion():
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    print("🌐 Navegador iniciado correctamente.")
+    print("🌐 Empezó extracción")
 
     try:
-        limite_paginas = 8  # 👈 ahora recorre 8 páginas
+        limite_paginas = 8
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = f"{URL_BASE}{nivel_pagina}/"
-            print(f"📄 Procesando Página {nivel_pagina}")
             driver.get(url_pagina)
             time.sleep(5)
 
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR,
-                    "div.listing-list-loop.stm-listing-directory-list-loop.stm-isotope-listing-item"))
-            )
-
             tarjetas = driver.find_elements(By.CSS_SELECTOR,
                 "div.listing-list-loop.stm-listing-directory-list-loop.stm-isotope-listing-item")
+
+            if not tarjetas:
+                # 🚫 Si no hay tarjetas, se detiene pero devuelve lo acumulado
+                break
 
             for tarjeta in tarjetas:
                 try:
                     enlace = tarjeta.find_element(By.CSS_SELECTOR, "div.title.heading-font a.rmv_txt_drctn")
                     url_auto = enlace.get_attribute("href")
-                    nombre = enlace.get_attribute("title") or enlace.text.strip()
 
                     valores = tarjeta.find_elements(By.CSS_SELECTOR, "div.value")
                     marca = modelo = year = kilometraje_txt = combustible = ""
@@ -92,10 +91,9 @@ def ejecutar_extraccion():
                     precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
 
                     auto = {
-                        "identificador": nombre.strip(),
                         "marca": marca,
                         "modelo": modelo,
-                        "year": limpiar_numero(year),  # 👈 cambiado de anio a year
+                        "year": limpiar_numero(year),
                         "kilometraje": limpiar_numero(kilometraje_txt),
                         "combustible": combustible if combustible else "No especificado",
                         "ciudad": ciudad,
@@ -106,7 +104,6 @@ def ejecutar_extraccion():
                         "usuario": USUARIO
                     }
 
-                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
@@ -116,11 +113,17 @@ def ejecutar_extraccion():
         return lista_autos
 
     except Exception as e:
+        # ⚠️ Devuelve lo acumulado aunque haya error
         print(f"❌ Error en Selenium: {e}")
-        return []
+        return lista_autos
 
     finally:
         driver.quit()
+
+
+
+
+
 
 
 

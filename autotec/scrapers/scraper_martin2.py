@@ -1,3 +1,4 @@
+# --- Importaciones necesarias ---
 import sys
 import time
 import re
@@ -5,32 +6,22 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
+# --- Variables globales ---
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
+# --- Funciones auxiliares ---
 def limpiar_numero(texto):
     if not texto:
         return 0
     limpio = re.sub(r"[^\d]", "", str(texto))
     return int(limpio) if limpio else 0
 
-def guardar_en_mongo(lista_autos):
-    try:
-        cliente = MongoClient("mongodb://localhost:27017/")
-        db = cliente["proyecto_bigdata"]
-        coleccion = db["AutoTec"]
-        if lista_autos:
-            coleccion.insert_many(lista_autos)
-            print(f"💾 Guardados {len(lista_autos)} autos en MongoDB.")
-    except Exception as e:
-        print(f"❌ Error guardando en MongoDB: {e}")
-
-def ejecutar_extraccion(limite_paginas=1):
+# --- Función principal de extracción ---
+def ejecutar_extraccion():
     URL_BASE = "https://www.difor.cl/autos-usados-chile?page="
     lista_autos = []
 
@@ -41,25 +32,27 @@ def ejecutar_extraccion(limite_paginas=1):
     options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    print("🌐 Empezó extracción")
 
     try:
+        limite_paginas = 38 # 👈 recorre hasta 34 páginas, pero se detiene si no hay más
+
         for nivel_pagina in range(1, limite_paginas + 1):
-            print(f"📄 Procesando Página {nivel_pagina}")
             url_pagina = f"{URL_BASE}{nivel_pagina}"
             driver.get(url_pagina)
 
-            WebDriverWait(driver, 15).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//a[@id='product-card-link']"))
-            )
-
             tarjetas = driver.find_elements(By.XPATH, "//a[@id='product-card-link']")
+
+            if not tarjetas:
+                # 🚫 Si no hay tarjetas, se detiene pero devuelve lo acumulado
+                break
 
             for tarjeta in tarjetas:
                 try:
                     href = tarjeta.get_attribute("href")
                     url_auto = "https://www.difor.cl" + href if href.startswith("/") else href
 
-                    # Marca, modelo, year
+                    # Marca, modelo, año
                     try:
                         titulo = tarjeta.find_element(By.XPATH, ".//p[contains(@class,'MuiTypography-body1')]").text.strip()
                         partes = titulo.split()
@@ -67,7 +60,6 @@ def ejecutar_extraccion(limite_paginas=1):
                         modelo = " ".join(partes[1:-1]) if len(partes) > 2 else "No especificado"
                         year = limpiar_numero(partes[-1]) if partes and partes[-1].isdigit() else 0
                     except:
-                        titulo = "No especificado"
                         marca = modelo = "No especificado"
                         year = 0
 
@@ -78,39 +70,35 @@ def ejecutar_extraccion(limite_paginas=1):
                     except:
                         precio = 0
 
-                    # Bloque de detalles (solo km y combustible)
+                    # Otros detalles
                     kilometraje = 0
                     combustible = "No especificado"
                     try:
-                        spans = tarjeta.find_elements(
-                            By.XPATH,
-                            ".//div[contains(@class,'MuiBox-root') and contains(@class,'css-dmamo3')]//span"
-                        )
-                        for s in spans:
-                            texto = s.text.strip().upper()
-                            if "KM" in texto or "KMS" in texto:
-                                kilometraje = limpiar_numero(s.text)
-                            elif any(x in texto for x in ["DIESEL","DIÉSEL","TDI","HDI","CRDI"]):
+                        spans = tarjeta.find_elements(By.XPATH, ".//span")
+                        for sp in spans:
+                            txt = sp.text.strip().upper()
+                            if "KM" in txt or "KMS" in txt:
+                                kilometraje = limpiar_numero(txt)
+                            elif "DIESEL" in txt or "DIÉSEL" in txt:
                                 combustible = "Diesel"
-                            elif any(x in texto for x in ["ELECTRICO","ELÉCTRICO","EV"]):
-                                combustible = "Eléctrico"
-                            elif any(x in texto for x in ["HIBRIDO","HÍBRIDO","HYBRID"]):
-                                combustible = "Híbrido"
-                            elif any(x in texto for x in ["BENCINA","GASOLINA"]):
+                            elif "BENCINA" in txt or "GASOLINA" in txt:
                                 combustible = "Bencina"
-                            elif any(x in texto for x in ["GAS","GNC","GLP"]):
-                                combustible = "Gas"
+                            elif "ELECTRICO" in txt or "ELÉCTRICO" in txt:
+                                combustible = "Eléctrico"
+                            elif "HIBRIDO" in txt or "HÍBRIDO" in txt or "HYBRID" in txt:
+                                combustible = "Híbrido"
                     except:
                         pass
 
+                    ciudad = "No especificado"
+
                     auto = {
-                        "identificador": titulo.strip(),
                         "marca": marca,
                         "modelo": modelo,
                         "year": year,
                         "kilometraje": kilometraje,
                         "combustible": combustible,
-                        "ciudad": "No especificado",  # Difor no muestra ciudad en el card
+                        "ciudad": ciudad,
                         "url": url_auto,
                         "precio": precio,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -118,22 +106,22 @@ def ejecutar_extraccion(limite_paginas=1):
                         "usuario": USUARIO
                     }
 
-                    print(auto)   # 👈 muestra cada auto en consola
                     lista_autos.append(auto)
 
                 except Exception:
                     continue
 
         print(f"✅ Extracción terminada: {len(lista_autos)} vehículos.")
-        guardar_en_mongo(lista_autos)
         return lista_autos
 
     except Exception as e:
+        # ⚠️ Devuelve lo acumulado aunque haya error
         print(f"❌ Error en Selenium: {e}")
-        return []
+        return lista_autos
 
     finally:
         driver.quit()
+
 
 
 
