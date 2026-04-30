@@ -36,7 +36,7 @@ def ejecutar_extraccion():
         driver = webdriver.Chrome(options=options)
         print("✅ navegador iniciado")
 
-        for pagina in range(5):
+        for pagina in range(18):
 
             url = "https://www.yapo.cl/autos-usados" if pagina == 0 else f"https://www.yapo.cl/autos-usados.{pagina + 1}"
             driver.get(url)
@@ -93,7 +93,7 @@ def ejecutar_extraccion():
                         By.CSS_SELECTOR, "li.d3-ad-tile__details-item"
                     )
 
-                    año = ""
+                    year = ""
                     kilometraje = ""
                     combustible = ""
 
@@ -101,7 +101,7 @@ def ejecutar_extraccion():
                         texto = d.text.lower().strip()
 
                         if texto.isdigit() and len(texto) == 4:
-                            año = texto
+                            year = texto
                         elif "km" in texto:
                             kilometraje = texto
                         elif texto in [
@@ -114,7 +114,7 @@ def ejecutar_extraccion():
                     lista_autos.append({
                         "marca": marca,
                         "modelo": modelo,
-                        "año": año,
+                        "year": year,
                         "kilometraje": kilometraje,
                         "combustible": combustible,
                         "ciudad": ciudad,
