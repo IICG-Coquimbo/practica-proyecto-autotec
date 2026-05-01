@@ -5,34 +5,25 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-# ================= CONFIG =================
-
-NOMBRE = "Luz Azocar"
-GRUPO = "AutoTec"
-FECHA = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-META = 500
-URL_BASE = "https://automoviles.emol.com/venta/autos-usados"
-
-# ================= FUNCIONES =================
+# ================= FUNCIONES DE APOYO =================
 
 def limpiar_numero(texto):
     return int(re.sub(r"[^\d]", "", texto)) if texto else 0
 
 def separar_marca_modelo(titulo):
     partes = titulo.split()
-    marca = partes[0] if len(partes) > 0 else None
-    modelo = " ".join(partes[1:]) if len(partes) > 1 else None
+    marca = partes[0] if len(partes) > 0 else "N/A"
+    modelo = " ".join(partes[1:]) if len(partes) > 1 else "N/A"
     return marca, modelo
 
 def extraer_info(info):
+    # Emol separa por "|" (Ej: "2022 | 45.000 km | Bencina | Santiago")
     partes = [p.strip() for p in info.split("|")]
-
-    year = None
+    
+    year = "0"
     if len(partes) > 0:
         match_year = re.search(r"\d{4}", partes[0])
-        if match_year:
-            year = int(match_year.group())
+        year = match_year.group() if match_year else "0"
 
     km = limpiar_numero(partes[1]) if len(partes) > 1 else 0
     combustible = partes[2] if len(partes) > 2 else "No disponible"
@@ -42,71 +33,60 @@ def extraer_info(info):
 
 # ================= FUNCIÓN PRINCIPAL =================
 
-def ejecutar_extraccion():
-
+def ejecutar_extraccion(meta=500):
+    NOMBRE = "Luz Azocar"
+    GRUPO = "AutoTec"
+    URL_BASE = "https://automoviles.emol.com/venta/autos-usados"
+    
+    # Configuración de Selenium
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
+    
+    driver = webdriver.Chrome(options=options)
+    
     total = 0
     pagina = 1
     links_vistos = set()
     datos_finales = []
 
-    # ================= SELENIUM =================
-    options = Options()
-    options.binary_location = "/usr/bin/google-chrome"
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")
-
-    driver = webdriver.Chrome(options=options)
-
-    print("Iniciando scraping...")
+    print(f"🚀 Iniciando Emol para {meta} registros...")
 
     try:
-        while total < META:
-
+        while total < meta:
             url = f"{URL_BASE}?p={pagina}"
             driver.get(url)
-            time.sleep(3)
+            time.sleep(2) # Emol es rápido, no necesita esperas tan largas
 
+            # Selector específico de Emol para cada auto
             autos = driver.find_elements(By.CSS_SELECTOR, "article.search-result.row")
 
-            if len(autos) == 0:
-                print(f"Página {pagina} sin resultados")
+            if not autos:
+                print(f"  🏁 Fin de resultados en página {pagina}")
                 break
 
-            guardados_pagina = 0
-
             for auto in autos:
-
-                if total >= META:
+                if total >= meta:
                     break
 
                 try:
-                    precio = limpiar_numero(auto.find_element(By.TAG_NAME, "h4").text)
+                    # Extracción directa desde la lista
+                    precio_texto = auto.find_element(By.TAG_NAME, "h4").text
+                    precio = limpiar_numero(precio_texto)
+                    
                     titulo = auto.find_element(By.TAG_NAME, "h3").text
                     info = auto.find_element(By.TAG_NAME, "p").text
                     link = auto.find_element(By.CSS_SELECTOR, "a.ga").get_attribute("href")
 
-                    if link in links_vistos:
+                    if link in links_vistos or precio == 0:
                         continue
 
                     marca, modelo = separar_marca_modelo(titulo)
                     year, km, combustible, ciudad = extraer_info(info)
 
-                    # VALIDACIÓN CORRECTA
-                    if (
-                        not marca or
-                        not modelo or
-                        not year or
-                        km == 0 or
-                        combustible == "No disponible" or
-                        ciudad == "No disponible" or
-                        not precio or
-                        not link
-                    ):
-                        continue
-
-                    dato = {
+                    registro = {
                         "marca": marca,
                         "modelo": modelo,
                         "year": year,
@@ -116,31 +96,23 @@ def ejecutar_extraccion():
                         "url": link,
                         "precio": precio,
                         "usuario": NOMBRE,
-                        "fecha_captura": FECHA,
-                        "grupo": GRUPO
+                        "fecha_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "grupo": GRUPO,
+                        "fuente": "Emol"
                     }
 
-
-                    datos_finales.append(dato)
+                    datos_finales.append(registro)
                     links_vistos.add(link)
                     total += 1
-                    guardados_pagina += 1
 
-                except:
+                except Exception:
                     continue
-
+            
+            print(f"  ✅ Página {pagina} procesada ({total}/{meta})")
             pagina += 1
 
     finally:
         driver.quit()
-        print("Navegador cerrado.")
+        print("🔒 Navegador de Luz cerrado.")
 
     return datos_finales
-
-
-# ================= EJECUTAR =================
-
-datos = ejecutar_extraccion()
-
-print("Scraping finalizado")
-print("Total extraído:", len(datos))
