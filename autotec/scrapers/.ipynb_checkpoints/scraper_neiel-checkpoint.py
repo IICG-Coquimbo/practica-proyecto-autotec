@@ -45,7 +45,6 @@ def ejecutar_extraccion():
     )
 
     try:
-        print("🌐 Iniciando navegador...")
         driver = webdriver.Chrome(options=options)
         print("✅ Navegador iniciado.")
         limite_paginas=10
@@ -53,7 +52,6 @@ def ejecutar_extraccion():
         driver.get(url_inicial)
 
         for nivel_pagina in range(limite_paginas):
-            print(f"\n📄 Procesando página {nivel_pagina + 1}...")
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(3)
 
