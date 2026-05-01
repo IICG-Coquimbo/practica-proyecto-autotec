@@ -1,1 +1,1 @@
-from .scraper_luz import ejecutar_extraccion
+from .scraper_jocelyn import ejecutar_extraccion
