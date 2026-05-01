@@ -1,208 +1,166 @@
 import os
 import re
 import time
+import tempfile
 from datetime import datetime
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
+# --- FUNCIONES DE APOYO ---
 
-# =========================
-# FUNCIONES
-# =========================
 def limpiar_numero(texto):
     if not texto:
-        return None
-    num = re.sub(r"[^\d]", "", texto)
-    return int(num) if num else None
-
+        return 0
+    limpio = re.sub(r"[^\d]", "", str(texto))
+    return int(limpio) if limpio else 0
 
 def extraer_year(texto):
-    match = re.search(r"\b(19[8-9][0-9]|20[0-2][0-9])\b", texto)
-    return int(match.group()) if match else None
-
-
-def normalizar_combustible(texto):
-    texto = texto.lower()
-
-    if "bencina" in texto or "gasolina" in texto:
-        return "gasolina"
-    if "diesel" in texto or "diésel" in texto:
-        return "diesel"
-    if "hibrido" in texto or "híbrido" in texto:
-        return "hibrido"
-    if "electrico" in texto or "eléctrico" in texto:
-        return "electrico"
-
-    return None
-
+    match = re.search(r"(20\d{2})", str(texto))
+    return int(match.group(1)) if match else 0
 
 def separar_marca_modelo(titulo):
     partes = titulo.split()
+    if len(partes) >= 2:
+        return partes[0], " ".join(partes[1:])
+    return titulo, "No especificado"
 
-    if len(partes) == 0:
-        return None, None
-
-    marca = partes[0].lower()
-    modelo = " ".join(partes[1:]).lower()
-
-    modelo = re.sub(r"\b(19[8-9][0-9]|20[0-2][0-9])\b", "", modelo).strip()
-
-    return marca, modelo
-
+def normalizar_combustible(texto):
+    texto = texto.lower()
+    if "diesel" in texto or "diésel" in texto: return "diesel"
+    if "hibrido" in texto or "híbrido" in texto: return "hibrido"
+    if "electrico" in texto or "eléctrico" in texto: return "electrico"
+    return "gasolina"
 
 def extraer_ciudad(texto):
-    ciudades = [
-        "Santiago", "La Serena", "Coquimbo", "Valparaíso", "Viña del Mar",
-        "Concepción", "Rancagua", "Talca", "Temuco", "Antofagasta",
-        "Iquique", "Copiapó", "Chillán", "Puerto Montt", "Osorno",
-        "La Florida", "Las Condes", "Maipú", "Providencia", "Ñuñoa",
-        "Macul", "San Miguel", "Puente Alto", "San Bernardo", "Quilicura",
-        "Huechuraba", "Recoleta", "Independencia", "Estación Central",
-        "Pudahuel", "Peñalolén", "Vitacura", "Lo Barnechea"
-    ]
+    # Bruno Fritsch suele listar sucursales o ciudades
+    ciudades = ["santiago", "concepcion", "valparaiso", "temuco", "rancagua", "la serena"]
+    for c in ciudades:
+        if c in texto.lower():
+            return c
+    return "santiago"
 
-    for ciudad in ciudades:
-        if ciudad.lower() in texto.lower():
-            return ciudad.lower()
+# --- FUNCIÓN PRINCIPAL ---
 
-    return None
-
-
-# =========================
-# FUNCIÓN PRINCIPAL
-# =========================
 def ejecutar_extraccion(max_autos=500):
-
-    # Limpieza
+    # 1. Limpieza radical de procesos previos para evitar bloqueos en Docker
     os.system("pkill -9 chrome")
     os.system("pkill -9 chromedriver")
-
-    print("🔎 Iniciando scraping Bruno Fritsch...")
-
-    # Selenium
+    
+    # Directorio temporal para que Chrome no choque con otras sesiones
+    user_data_dir = tempfile.mkdtemp()
+    
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument(f"--user-data-dir={user_data_dir}")
     options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-
-    driver = webdriver.Chrome(options=options)
-
-    url = "https://www.brunofritsch.cl/autos-usados"
-    driver.get(url)
-
-    time.sleep(8)
+    options.add_argument("--remote-allow-origins=*")
+    
+    # 2. Camuflaje Antidetección (Crucial para Bruno Fritsch)
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 
     autos_extraidos = []
-    links_vistos = set()
+    
+    try:
+        driver = webdriver.Chrome(options=options)
+        # Ocultar la propiedad 'webdriver' de navigator
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
+        
+        print("🌐 Browser de Jocelyn iniciado correctamente.")
+        driver.set_page_load_timeout(60)
+        driver.get("https://www.brunofritsch.cl/autos-usados")
+        
+        # Espera inicial generosa para carga dinámica
+        time.sleep(10)
+        
+        links_vistos = set()
+        intentos_sin_nuevos = 0
 
-    for scroll in range(40):
+        while len(autos_extraidos) < max_autos and intentos_sin_nuevos < 50:
+            # Selector de cuadrícula de Material UI (común en Bruno Fritsch)
+            bloques = driver.find_elements(By.CSS_SELECTOR, "div.MuiGrid-item")
+            
+            puntos_antes = len(autos_extraidos)
 
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(2)
-
-        bloques = driver.find_elements(By.CSS_SELECTOR, "div.MuiGrid-root.MuiGrid-item")
-
-        for bloque in bloques:
-
-            if len(autos_extraidos) >= max_autos:
-                break
-
-            try:
-                texto = bloque.text.strip()
-
-                if not texto:
-                    continue
-
-                if "$" not in texto or "km" not in texto.lower():
-                    continue
-
-                lineas = texto.split("\n")
-
-                titulo = None
-                precio = None
-                kilometraje = None
-
-                for l in lineas:
-                    if re.search(r"\b(19[8-9][0-9]|20[0-2][0-9])\b", l):
-                        titulo = l
-                        break
-
-                for l in lineas:
-                    if "$" in l:
-                        precio = limpiar_numero(l)
-                        break
-
-                for l in lineas:
-                    if "km" in l.lower():
-                        kilometraje = limpiar_numero(l)
-                        break
-
-                if not titulo:
-                    continue
-
-                marca, modelo = separar_marca_modelo(titulo)
-                year = extraer_year(titulo)
-                combustible = normalizar_combustible(texto)
-                ciudad = extraer_ciudad(texto) or "santiago"
-
+            for bloque in bloques:
+                if len(autos_extraidos) >= max_autos:
+                    break
+                
                 try:
-                    link = bloque.find_element(By.TAG_NAME, "a").get_attribute("href")
+                    # Validamos que el bloque tenga un link y un precio
+                    texto_completo = bloque.text.strip()
+                    if "$" not in texto_completo:
+                        continue
+
+                    link_elem = bloque.find_element(By.TAG_NAME, "a")
+                    link = link_elem.get_attribute("href")
+                    
+                    if not link or link in links_vistos:
+                        continue
+
+                    # Extracción de datos con lógica de respaldo
+                    lineas = [l.strip() for l in texto_completo.split("\n") if l.strip()]
+                    
+                    titulo = lineas[0]
+                    marca, modelo = separar_marca_modelo(titulo)
+                    
+                    # Buscamos el año en todo el texto del bloque
+                    year = extraer_year(texto_completo)
+                    
+                    # Buscamos el precio (la línea que contenga '$')
+                    precio_str = next((l for l in lineas if "$" in l), "0")
+                    precio = limpiar_numero(precio_str)
+
+                    # Buscamos el kilometraje (la línea que contenga 'km')
+                    km_str = next((l for l in lineas if "km" in l.lower()), "0")
+                    kilometraje = limpiar_numero(km_str)
+
+                    auto = {
+                        "marca": marca,
+                        "modelo": modelo,
+                        "year": year,
+                        "kilometraje": kilometraje,
+                        "combustible": normalizar_combustible(texto_completo),
+                        "ciudad": extraer_ciudad(texto_completo),
+                        "url": link,
+                        "precio": precio,
+                        "fecha_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "grupo": "autotec",
+                        "usuario": "jocelyn"
+                    }
+
+                    # 3. Validación: Si tiene precio, lo guardamos
+                    if auto["precio"] > 0:
+                        autos_extraidos.append(auto)
+                        links_vistos.add(link)
+                        if len(autos_extraidos) % 10 == 0:
+                            print(f"✅ {len(autos_extraidos)} autos capturados...")
                 except:
-                    link = None
-
-                if not link:
-                    link = f"{url}#auto-{marca}-{modelo}-{year}-{precio}"
-
-                if link in links_vistos:
                     continue
 
-                links_vistos.add(link)
+            # Scroll más agresivo para cargar nuevos elementos
+            driver.execute_script("window.scrollBy(0, 1500);")
+            time.sleep(3)
+            
+            if len(autos_extraidos) == puntos_antes:
+                intentos_sin_nuevos += 1
+            else:
+                intentos_sin_nuevos = 0
 
-                auto = {
-                    "marca": marca,
-                    "modelo": modelo,
-                    "year": year,
-                    "kilometraje": kilometraje,
-                    "combustible": combustible,
-                    "ciudad": ciudad,
-                    "url": link,
-                    "precio": precio,
-                    "fecha_captura": datetime.now(),
-                    "grupo": "autotec",
-                    "usuario": "jocelyn"
-                }
+    except Exception as e:
+        print(f"Error fatal en el scraper de Jocelyn: {e}")
+    finally:
+        if 'driver' in locals():
+            driver.quit()
 
-                if all([
-                    auto["marca"],
-                    auto["modelo"],
-                    auto["year"],
-                    auto["kilometraje"],
-                    auto["combustible"],
-                    auto["precio"]
-                ]):
-                    autos_extraidos.append(auto)
-
-            except:
-                continue
-
-        if len(autos_extraidos) >= max_autos:
-            break
-
-    driver.quit()
-
-    print("\n📊 RESULTADO FINAL")
-    print(f"🚗 Autos extraídos: {len(autos_extraidos)}")
-
+    print(f"\n📊 RESULTADO FINAL: {len(autos_extraidos)} autos extraídos.")
     return autos_extraidos
-
-
-# =========================
-# EJECUCIÓN LOCAL
-# =========================
-if __name__ == "__main__":
-    datos = ejecutar_extraccion(max_autos=10)
-    print("Total:", len(datos))

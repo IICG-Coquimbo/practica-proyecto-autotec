@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from autotec.scrapers import scraper_dani, scraper_neiel, scraper_martin, scraper_belenandrades1,scraper_belenandrades2, scraper_belenandrades3, scraper_belenandrades4, scraper_javiera, scraper_jocelyn, scraper_luz, scraper_martin2
+from autotec.scrapers import scraper_dani, scraper_neiel, scraper_martin, scraper_belenandrades1,scraper_belenandrades2, scraper_belenandrades3, scraper_belenandrades4, scraper_javiera, scraper_jocelyn, scraper_luz, scraper_martin2, scraper_martin3, scraper_belenandrades5
 
 # Configuración de Spark (Mantenlo fuera de las funciones para no recrear la sesión)
 spark = (
@@ -22,6 +22,7 @@ def procesar_y_guardar(lista_scrapers):
                 df = spark.createDataFrame(datos)
                 
                 # 2. Configuración de UPSERT
+                # 2. Configuración de UPSERT
                 df.write \
                     .format("mongodb") \
                     .mode("append") \
@@ -29,7 +30,7 @@ def procesar_y_guardar(lista_scrapers):
                     .option("collection", "lista_autos") \
                     .option("operationType", "update") \
                     .option("upsertDocument", "true") \
-                    .option("shardKey", '{"url": 1}') \
+                    .option("idFieldList", "url") \
                     .save()
                 
                 print(f"✅ {nombre}: {len(datos)} registros procesados (actualizados/insertados) en MongoDB.")
@@ -51,11 +52,14 @@ grupo_1 = [
 
 # Tanda 2
 grupo_2 = [
-    ("Luz", scraper_luz.ejecutar_extraccion),
-    ("Martin2", scraper_martin2.ejecutar_extraccion),
-    ("Belen4", scraper_belenandrades4.ejecutar_extraccion),
+   # ("Luz", scraper_luz.ejecutar_extraccion),
+   # ("Martin2", scraper_martin2.ejecutar_extraccion),
+   # ("Belen4", scraper_belenandrades4.ejecutar_extraccion),
     ("Jocelyn", scraper_jocelyn.ejecutar_extraccion),
-    ("Javiera", scraper_javiera.ejecutar_extraccion)
+   # ("Martin3", scraper_martin3.ejecutar_extraccion),
+    #("Javiera", scraper_javiera.ejecutar_extraccion),
+   # ("Belen5", scraper_belenandrades5.ejecutar_extraccion)
+
 ]
 
 # --- EJECUCIÓN ---

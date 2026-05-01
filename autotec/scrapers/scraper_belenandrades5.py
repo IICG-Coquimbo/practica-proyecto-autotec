@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Belen A"
 
-def ejecutar_extraccion(max_paginas=5):
+def ejecutar_extraccion(max_paginas=30):
     # Limpieza de procesos para evitar saturación de memoria
     os.system("pkill -9 chrome")
     os.system("pkill -9 chromedriver")
@@ -34,7 +34,7 @@ def ejecutar_extraccion(max_paginas=5):
         for pagina in range(1, max_paginas + 1):
             print(f"🔎 [Salazar Israel] Extrayendo página {pagina}...")
             driver.get(URL_BASE.format(pagina))
-            time.sleep(5) # Tiempo para carga de JavaScript
+            time.sleep(4) # Tiempo para carga de JavaScript
 
             autos = driver.find_elements(By.CSS_SELECTOR, "article")
             if not autos:
