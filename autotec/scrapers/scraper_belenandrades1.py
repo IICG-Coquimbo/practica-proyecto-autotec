@@ -1,9 +1,13 @@
 #callegari
 import os
 import time
-import undetected_chromedriver as uc
+from selenium import webdriver # Faltaba este import
+from selenium.webdriver.chrome.options import Options # Faltaba este import
 from selenium.webdriver.common.by import By
 
+# =========================
+# LIMPIEZA (Fuera de la función para que corra al importar)
+# =========================
 os.system("pkill -9 chrome")
 os.system("pkill -9 chromedriver")
 os.system("rm -rf /tmp/.com.google.Chrome.*")
@@ -16,81 +20,89 @@ def ejecutar_extraccion():
     lista_autos = []
     driver = None
 
-    options = uc.ChromeOptions()
+    # Configuración de opciones (Asegúrate de que coincida con tu entorno Docker)
+    options = Options()
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--headless=new")
+    # Agregamos un User-Agent para que Callegari no nos bloquee tan rápido
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
 
     try:
-        driver = uc.Chrome(options=options, version_main=147)
-        print("Navegador iniciado correctamente.")
+        # IMPORTANTE: Aquí es donde daba el error. Usamos webdriver.Chrome estándar.
+        driver = webdriver.Chrome(options=options)
+        print("Navegador iniciado correctamente para Callegari.")
 
-        limite_paginas = 10
+        limite_paginas = 3 # Bajamos el límite para pruebas, luego puedes subirlo a 10
         URL_BASE = "https://callegari.cl/seminuevos/page/{}"
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = URL_BASE.format(nivel_pagina)
+            print(f"Buscando en: {url_pagina}")
 
-            driver.get(url_pagina)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(6)
+            try:
+                driver.get(url_pagina)
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(6)
 
-            bloques = driver.find_elements(By.CSS_SELECTOR, "a.auto-block")
+                bloques = driver.find_elements(By.CSS_SELECTOR, "a.auto-block")
 
-            for bloque in bloques:
-                try:
-                    url_auto = bloque.get_attribute("href")
+                for bloque in bloques:
+                    try:
+                        url_auto = bloque.get_attribute("href")
+                        lineas = [l.strip() for l in bloque.text.strip().split("\n") if l.strip()]
 
-                    # Extraemos todo el texto y separamos por lineas
-                    lineas = [l.strip() for l in bloque.text.strip().split("\n") if l.strip()]
+                        if not lineas: continue
 
-                    # Detectar si hay badge en la primera linea
-                    badges = ["Auto Empresa", "Garantia Fabrica", "Garantía Fábrica", "Unico Dueno", "Único Dueño"]
-                    inicio = 1 if any(b.lower() in lineas[0].lower() for b in badges) else 0
+                        # Lógica de detección de badges
+                        badges = ["Auto Empresa", "Garantia Fabrica", "Garantía Fábrica", "Unico Dueno", "Único Dueño"]
+                        inicio = 1 if any(b.lower() in lineas[0].lower() for b in badges) else 0
 
-                    marca  = lineas[inicio + 0] if len(lineas) > inicio + 0 else "N/A"
-                    modelo = lineas[inicio + 1] if len(lineas) > inicio + 1 else "N/A"
-                    precio = lineas[inicio + 3] if len(lineas) > inicio + 3 else "0"
+                        marca  = lineas[inicio + 0] if len(lineas) > inicio + 0 else "N/A"
+                        modelo = lineas[inicio + 1] if len(lineas) > inicio + 1 else "N/A"
+                        precio = lineas[inicio + 3] if len(lineas) > inicio + 3 else "0"
 
-                    if len(lineas) > inicio + 4:
-                        partes      = [p.strip() for p in lineas[inicio + 4].split("|")]
-                        year        = partes[0] if len(partes) > 0 else "N/A"
-                        kilometraje = partes[1] if len(partes) > 1 else "N/A"
-                        combustible = partes[3] if len(partes) > 3 else "N/A"
-                    else:
-                        year = kilometraje = combustible = "N/A"
-    
-                    lista_autos.append({
-                        "marca":         marca,
-                        "modelo":        modelo,
-                        "year":          year,
-                        "kilometraje":   kilometraje,
-                        "combustible":   combustible,
-                        "ciudad":        "N/A",
-                        "url":           url_auto,
-                        "precio":        precio,
-                        "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        "grupo":         NOMBRE_GRUPO,
-                        "usuario":       USUARIO
-                    })
+                        if len(lineas) > inicio + 4:
+                            partes      = [p.strip() for p in lineas[inicio + 4].split("|")]
+                            year        = partes[0] if len(partes) > 0 else "N/A"
+                            kilometraje = partes[1] if len(partes) > 1 else "N/A"
+                            combustible = partes[3] if len(partes) > 3 else "N/A"
+                        else:
+                            year = kilometraje = combustible = "N/A"
+                        
+                        lista_autos.append({
+                            "marca":         marca,
+                            "modelo":        modelo,
+                            "year":          year,
+                            "kilometraje":   kilometraje,
+                            "combustible":   combustible,
+                            "ciudad":        "N/A",
+                            "url":           url_auto,
+                            "precio":        precio,
+                            "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
+                            "grupo":         NOMBRE_GRUPO,
+                            "usuario":       USUARIO
+                        })
 
-                except Exception:
-                    continue
+                    except Exception:
+                        continue
 
-            print(f"  Acumulado total: {len(lista_autos)} autos.")
-            time.sleep(2)
+                print(f"   Acumulado total: {len(lista_autos)} autos.")
+                time.sleep(2)
+            
+            except Exception as e:
+                print(f"Error cargando página {nivel_pagina}: {e}")
+                continue
 
-        print(f"Extraccion terminada: {len(lista_autos)} autos en total.")
         return lista_autos
 
     except Exception as e:
-        print(f"Error en Selenium: {e}")
+        print(f"Error en Selenium (Callegari): {e}")
+        return []
 
     finally:
         if driver is not None:
-            try:
-                driver.quit()
-            except:
-                pass
+            print("Cerrando navegador Callegari...")
+            driver.quit()

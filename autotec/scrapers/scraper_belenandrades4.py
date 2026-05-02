@@ -4,39 +4,45 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
-print("🧹 Limpieza de procesos y temporales completada.")
-
 def ejecutar_extraccion():
     NOMBRE_GRUPO = "AutoTec"
     USUARIO = "Belen A"
     lista_autos = []
 
+    # Headers para simular un navegador real
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
 
     URL_BASE = "https://www.autoselect.cl/web/autos-usados?page={}"
 
-    for nivel_pagina in range(1, 20):
+    print(f"🚀 Iniciando extracción en AutoSelect...")
+
+    for nivel_pagina in range(1, 6):  # Ajustado a 5 páginas para pruebas, puedes subirlo a 20
         url_pagina = URL_BASE.format(nivel_pagina)
 
         try:
             response = requests.get(url_pagina, headers=headers, timeout=10)
-            soup = BeautifulSoup(response.text, "lxml")
+            
+            # CAMBIO CLAVE: lxml -> html.parser
+            soup = BeautifulSoup(response.text, "html.parser")
+            
             items = soup.select("div.item.item-es")
-            print(f"  -> {len(items)} autos encontrados.")
-
-            if len(items) == 0:
-                print("  Sin mas autos, fin de paginas.")
+            
+            if not items:
+                print(f"  Página {nivel_pagina}: Sin más autos, fin de paginas.")
                 break
 
             for item in items:
                 try:
+                    # URL del vehículo
                     try:
-                        url_auto = "https://www.autoselect.cl" + item.select_one("a.link-vehiculo, a[href*='/web/vehiculos/view']").get("href")
+                        enlace = item.select_one("a.link-vehiculo, a[href*='/web/vehiculos/view']")
+                        url_auto = "https://www.autoselect.cl" + enlace.get("href") if enlace else "N/A"
                     except:
                         url_auto = "N/A"
 
+                    # Marca y Modelo
                     try:
                         marca_modelo = item.select_one("h3.brand").text.strip()
                         partes = marca_modelo.split(" ", 1)
@@ -45,18 +51,20 @@ def ejecutar_extraccion():
                     except:
                         marca = modelo = "N/A"
 
+                    # Precio
                     try:
                         precio = item.select_one("span.price").text.strip()
                     except:
                         precio = "0"
 
+                    # Otros datos usando Regex (Año, KM, Combustible)
                     try:
                         texto_features = item.get_text()
 
                         year_match = re.search(r'\b(19|20)\d{2}\b', texto_features)
                         year = year_match.group() if year_match else "N/A"
 
-                        km_match = re.search(r'([\d\.]+)\s*KM', texto_features)
+                        km_match = re.search(r'([\d\.]+)\s*KM', texto_features, re.IGNORECASE)
                         kilometraje = km_match.group(1) if km_match else "N/A"
 
                         combustible = "N/A"
@@ -84,13 +92,12 @@ def ejecutar_extraccion():
                 except Exception:
                     continue
 
+            print(f"  ✅ Página {nivel_pagina} lista. Acumulado: {len(lista_autos)} autos.")
+            time.sleep(1)
+
         except Exception as e:
-            print(f"  Error en pagina {nivel_pagina}: {e}")
+            print(f"  ❌ Error en página {nivel_pagina}: {e}")
             continue
 
-        print(f"  Acumulado total: {len(lista_autos)} autos.")
-        time.sleep(1)
-
-    print(f"\nExtraccion terminada: {len(lista_autos)} autos en total.")
+    print(f"\n✨ Extracción de AutoSelect terminada: {len(lista_autos)} autos en total.")
     return lista_autos
-
