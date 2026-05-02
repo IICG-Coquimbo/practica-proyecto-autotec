@@ -52,20 +52,20 @@ grupo_1 = [
 
 # Tanda 2
 grupo_2 = [
-   # ("Luz", scraper_luz.ejecutar_extraccion),
-   # ("Martin2", scraper_martin2.ejecutar_extraccion),
-   # ("Belen4", scraper_belenandrades4.ejecutar_extraccion),
+    ("Luz", scraper_luz.ejecutar_extraccion),
+    ("Martin2", scraper_martin2.ejecutar_extraccion),
+    ("Belen4", scraper_belenandrades4.ejecutar_extraccion),
     ("Jocelyn", scraper_jocelyn.ejecutar_extraccion),
-   # ("Martin3", scraper_martin3.ejecutar_extraccion),
-    #("Javiera", scraper_javiera.ejecutar_extraccion),
-   # ("Belen5", scraper_belenandrades5.ejecutar_extraccion)
+    ("Martin3", scraper_martin3.ejecutar_extraccion),
+    ("Javiera", scraper_javiera.ejecutar_extraccion),
+    ("Belen5", scraper_belenandrades5.ejecutar_extraccion)
 
 ]
 
 # --- EJECUCIÓN ---
-# Puedes comentar una línea para ejecutar solo la otra
-#print("Iniciando Tanda 1...")
-#procesar_y_guardar(grupo_1)
+
+print("Iniciando Tanda 1...")
+procesar_y_guardar(grupo_1)
 
 print("Iniciando Tanda 2...")
 procesar_y_guardar(grupo_2)

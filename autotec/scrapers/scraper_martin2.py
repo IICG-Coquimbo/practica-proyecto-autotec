@@ -118,3 +118,13 @@ def ejecutar_extraccion(meta_autos=500):
         print("🔒 Navegador de Martin cerrado.")
 
     return lista_autos
+
+
+
+
+
+
+
+
+
+
