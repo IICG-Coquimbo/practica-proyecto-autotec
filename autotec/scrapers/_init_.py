@@ -1,0 +1,5 @@
+from .scraper_belenandrades1 import ejecutar_extraccion
+from .scraper_belenandrades2 import ejecutar_extraccion
+from .scraper_belenandrades3 import ejecutar_extraccion
+from .scraper_belenandrades4 import ejecutar_extraccion
+from .scraper_belenandrades5 import ejecutar_extraccion
