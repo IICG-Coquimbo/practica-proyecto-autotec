@@ -4,7 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-# --- Variables globales ---
+# --- Variables globales --
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 

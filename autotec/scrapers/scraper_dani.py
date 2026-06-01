@@ -23,7 +23,7 @@ def ejecutar_extraccion():
     NOMBRE_GRUPO = "autotec"
     USUARIO = "dani"
 
-    # --- NAVEGADOR ---
+    # --- NAVEGADOR --
     options = Options()
     options.binary_location = "/usr/bin/google-chrome"
     options.add_argument("--no-sandbox")

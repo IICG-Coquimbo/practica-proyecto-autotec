@@ -5,7 +5,7 @@ from selenium import webdriver # Faltaba
 from selenium.webdriver.chrome.options import Options # Faltaba
 from selenium.webdriver.common.by import By
 
-# =========================
+# ========================
 # LIMPIEZA
 # =========================
 os.system("pkill -9 chrome")

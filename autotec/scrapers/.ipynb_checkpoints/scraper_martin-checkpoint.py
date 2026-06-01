@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
-# --- Variables globales ---
+# --- Variables globales --
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 

@@ -4,7 +4,7 @@ import re
 from selenium import webdriver # Faltaba este import
 from selenium.webdriver.chrome.options import Options # Faltaba este import
 from selenium.webdriver.common.by import By
-
+#
 # =========================
 # LIMPIEZA (Fuera de la función para que corra al importar)
 # =========================

@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Neiel C"
-
+#
 
 def limpiar_numero(texto):
     if not texto:

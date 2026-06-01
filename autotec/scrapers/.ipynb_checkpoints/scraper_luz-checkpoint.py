@@ -5,7 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-# ================= FUNCIONES DE APOYO =================
+# ================= FUNCIONES DE APOYO ================
 
 def limpiar_numero(texto):
     return int(re.sub(r"[^\d]", "", texto)) if texto else 0
