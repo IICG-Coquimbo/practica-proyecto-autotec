@@ -1,6 +1,5 @@
 #Contenedor A
 
-from pyspark.sql import SparkSession
 import os
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
@@ -10,9 +9,7 @@ from autotec.scrapers import   scraper_dani, scraper_neiel, scraper_martin, scra
 # Configuración de Spark (Mantenlo fuera de las funciones para no recrear la sesión)
 
 load_dotenv()
-
 MONGO_URI = os.getenv("MONGO_URI")
-
 spark = (
     SparkSession.builder
     .appName("AutoTec_Batch_Processing")
