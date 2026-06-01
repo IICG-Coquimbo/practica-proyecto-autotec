@@ -1,5 +1,6 @@
 import os
 import time
+import re
 from selenium import webdriver # Faltaba este import
 from selenium.webdriver.chrome.options import Options # Faltaba este import
 from selenium.webdriver.common.by import By
@@ -34,12 +35,11 @@ def ejecutar_extraccion():
         driver = webdriver.Chrome(options=options)
         print("Navegador iniciado correctamente para Callegari.")
 
-        limite_paginas = 3 # Bajamos el límite para pruebas, luego puedes subirlo a 10
+        limite_paginas = 10 # Bajamos el límite para pruebas, luego puedes subirlo a 10
         URL_BASE = "https://callegari.cl/seminuevos/page/{}"
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = URL_BASE.format(nivel_pagina)
-            print(f"Buscando en: {url_pagina}")
 
             try:
                 driver.get(url_pagina)
@@ -70,6 +70,15 @@ def ejecutar_extraccion():
                             combustible = partes[3] if len(partes) > 3 else "N/A"
                         else:
                             year = kilometraje = combustible = "N/A"
+
+                        try:
+                            div_imagen = bloque.find_element(By.CSS_SELECTOR, "div.u-img")
+                            style_img = div_imagen.get_attribute("style")
+                        
+                            match = re.search(r'url\(["\']?(.*?)["\']?\)', style_img)
+                            foto_url = match.group(1) if match else ""
+                        except Exception:
+                            foto_url = ""
                         
                         lista_autos.append({
                             "marca":         marca,
@@ -80,6 +89,7 @@ def ejecutar_extraccion():
                             "ciudad":        "N/A",
                             "url":           url_auto,
                             "precio":        precio,
+                            "foto_url":      foto_url,
                             "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                             "grupo":         NOMBRE_GRUPO,
                             "usuario":       USUARIO
@@ -88,7 +98,6 @@ def ejecutar_extraccion():
                     except Exception:
                         continue
 
-                print(f"   Acumulado total: {len(lista_autos)} autos.")
                 time.sleep(2)
             
             except Exception as e:

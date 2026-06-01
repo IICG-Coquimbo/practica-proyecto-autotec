@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # --- Configuración Global ---
 NOMBRE_GRUPO = "AutoTec"
-USUARIO = "Javiera Pizarro"
+USUARIO = "Javiera"
 
 def crear_driver():
     """Crea una nueva instancia del navegador Chrome"""
@@ -51,27 +51,33 @@ def ejecutar_extraccion(max_paginas=45, reiniciar_cada=20):
                             texto_tarjeta = auto.text.strip()
                             precio_match = re.search(r"\$\s?([\d\.]+)", texto_tarjeta)
                             precio = precio_match.group(1).replace(".", "") if precio_match else "0"
+                            try:
+                                img = auto.find_element(By.CSS_SELECTOR, "img.object-cover")
+                                foto_url = img.get_attribute("srcset") or img.get_attribute("src") or ""
+                                
+                                if foto_url and "," in foto_url:
+                                    foto_url = foto_url.split(",")[-1].strip().split(" ")[0]
+                            except Exception:
+                                foto_url = ""
 
                             datos_base.append({
                                 "url": link,
                                 "precio": precio,
                                 "fecha_captura": FECHA,
+                                "foto_url": foto_url,
                                 "grupo": NOMBRE_GRUPO,
                                 "usuario": USUARIO
                             })
                     except: continue
-                print(f"  📂 Página {pagina} analizada. Total links: {len(datos_base)}")
             except Exception as e:
                 print(f"  ⚠️ Salto en página {pagina} por error.")
                 continue
 
         # FASE 2: Extracción de detalles con REINICIO DE MEMORIA
-        print(f"\n🔄 Procesando detalles. Reinicio automático cada {reiniciar_cada} autos...")
-        
+        print(f"🔎 Fase 1 lista. Total URLs base: {len(datos_base)}")
         for i, dato in enumerate(datos_base, start=1):
             # Lógica de reinicio para liberar RAM
             if i % reiniciar_cada == 0:
-                print(f"  ♻️ Reiniciando driver para liberar memoria ({i}/{len(datos_base)})...")
                 driver.quit()
                 driver, wait = crear_driver()
 
@@ -99,8 +105,10 @@ def ejecutar_extraccion(max_paginas=45, reiniciar_cada=20):
                 elif "diesel" in cuerpo or "diésel" in cuerpo: dato["combustible"] = "Diesel"
                 else: dato["combustible"] = "N/A"
 
-                dato["ciudad"] = "Chile"
+                dato["ciudad"] = "N/A"
                 datos_finales.append(dato)
+                if i % 10 == 0:
+                    print(f"  Detalles procesados: {i}/{len(datos_base)}")
             except:
                 continue
 

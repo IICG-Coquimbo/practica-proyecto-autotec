@@ -22,7 +22,7 @@ def limpiar_numero(texto):
 
 # --- Función principal de extracción ---
 def ejecutar_extraccion():
-    URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/page/"
+    URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/"
     lista_autos = []
 
     options = Options()
@@ -32,7 +32,7 @@ def ejecutar_extraccion():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     print("🌐 Empezó extracción")
 
     try:
@@ -89,6 +89,11 @@ def ejecutar_extraccion():
 
                     precio_elementos = tarjeta.find_elements(By.CSS_SELECTOR, "span.heading-font")
                     precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
+                    try:
+                        foto = tarjeta.find_element(By.CSS_SELECTOR, "img.img-responsive")
+                        foto_url = foto.get_attribute("src")
+                    except:
+                        foto_url = None
 
                     auto = {
                         "marca": marca,
@@ -99,6 +104,7 @@ def ejecutar_extraccion():
                         "ciudad": ciudad,
                         "url": url_auto,
                         "precio": limpiar_numero(precio_txt),
+                        "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO

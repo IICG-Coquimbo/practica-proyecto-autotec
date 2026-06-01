@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from selenium import webdriver # Faltaba
 from selenium.webdriver.chrome.options import Options # Faltaba
@@ -37,7 +38,6 @@ def ejecutar_extraccion():
 
         for pagina in range(1, limite_paginas + 1):
             url = URL_BASE.format(pagina)
-            print(f"Buscando en: {url}")
             
             try:
                 driver.get(url)
@@ -72,6 +72,22 @@ def ejecutar_extraccion():
                         partes_nombre = nombre.split(" ", 1)
                         marca = partes_nombre[0] if len(partes_nombre) > 0 else "N/A"
                         modelo = partes_nombre[1] if len(partes_nombre) > 1 else "N/A"
+                        try:
+                            img = bloque.find_element(By.CSS_SELECTOR, "div.vehica-car-card__image img")
+                            
+                            foto_url = (
+                                img.get_attribute("data-srcset")
+                                or img.get_attribute("srcset")
+                                or img.get_attribute("data-src")
+                                or img.get_attribute("src")
+                                or ""
+                            )
+                        
+                            if foto_url and "," in foto_url:
+                                foto_url = foto_url.split(",")[0].strip().split(" ")[0]
+                        
+                        except Exception:
+                            foto_url = ""
 
                         lista_autos.append({
                             "marca": marca,
@@ -82,6 +98,7 @@ def ejecutar_extraccion():
                             "ciudad": "N/A",
                             "url": url_auto,
                             "precio": precio,
+                            "foto_url": foto_url,
                             "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                             "grupo": NOMBRE_GRUPO,
                             "usuario": USUARIO
@@ -89,7 +106,6 @@ def ejecutar_extraccion():
                     except:
                         continue
                 
-                print(f"   Página {pagina} lista. Acumulado: {len(lista_autos)}")
 
             except Exception as e:
                 print(f"Error en página {pagina}: {e}")

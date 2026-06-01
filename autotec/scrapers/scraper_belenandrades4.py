@@ -74,15 +74,24 @@ def ejecutar_extraccion():
                     except:
                         year = kilometraje = combustible = "N/A"
 
+                    # Foto URL
+                    # Foto URL
+                    try:
+                        img = item.select_one("div.img img.img-responsive")
+                        foto_url = img.get("src").strip() if img and img.get("src") else ""
+                    except:
+                        foto_url = ""
+
                     lista_autos.append({
                         "marca":         marca,
                         "modelo":        modelo,
                         "year":          year,
                         "kilometraje":   kilometraje,
                         "combustible":   combustible,
-                        "ciudad":        "Cerrillos, Santiago",
+                        "ciudad":        "Cerrillos",
                         "url":           url_auto,
                         "precio":        precio,
+                        "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo":         NOMBRE_GRUPO,
                         "usuario":       USUARIO
@@ -91,7 +100,6 @@ def ejecutar_extraccion():
                 except Exception:
                     continue
 
-            print(f"  ✅ Página {nivel_pagina} lista. Acumulado: {len(lista_autos)} autos.")
             time.sleep(1)
 
         except Exception as e:

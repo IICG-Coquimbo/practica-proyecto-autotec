@@ -32,7 +32,6 @@ def ejecutar_extraccion(max_paginas=30):
 
     try:
         for pagina in range(1, max_paginas + 1):
-            print(f"🔎 [Salazar Israel] Extrayendo página {pagina}...")
             driver.get(URL_BASE.format(pagina))
             time.sleep(4) # Tiempo para carga de JavaScript
 
@@ -93,6 +92,20 @@ def ejecutar_extraccion(max_paginas=30):
                     if not year or precio_final == 0:
                         continue
 
+                    try:
+                        img = bloque.find_element(By.CSS_SELECTOR, "img.object-cover")
+                        
+                        srcset = img.get_attribute("srcset") or ""
+                        src = img.get_attribute("src") or ""
+                    
+                        if srcset:
+                            foto_url = srcset.split(",")[-1].strip().split(" ")[0]
+                        else:
+                            foto_url = src.strip()
+                    
+                    except Exception:
+                        foto_url = ""
+
                     lista_autos.append({
                         "marca": marca,
                         "modelo": modelo,
@@ -100,10 +113,10 @@ def ejecutar_extraccion(max_paginas=30):
                         "kilometraje": int(km_texto),
                         "url": url_auto,
                         "precio": precio_final,
+                        "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO,
-                        "fuente": "salazarisrael.cl"
                     })
 
                 except Exception:

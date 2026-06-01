@@ -87,6 +87,12 @@ def ejecutar_extraccion(meta_autos=500):
                     except:
                         pass
 
+                    try:
+                        img = bloque.find_element(By.CSS_SELECTOR, "div#grid-product-card-img img")
+                        foto_url = img.get_attribute("src") or ""
+                    except Exception:
+                        foto_url = ""
+
                     auto = {
                         "marca": marca,
                         "modelo": modelo,
@@ -96,10 +102,10 @@ def ejecutar_extraccion(meta_autos=500):
                         "ciudad": "Chile (Sucursal Difor)",
                         "url": url_auto,
                         "precio": precio,
+                        "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO,
-                        "fuente": "Difor"
                     }
 
                     lista_autos.append(auto)
@@ -107,7 +113,6 @@ def ejecutar_extraccion(meta_autos=500):
                 except Exception:
                     continue
             
-            print(f"  ✅ Página {pagina} completada ({len(lista_autos)}/{meta_autos})")
             pagina += 1
 
     except Exception as e:

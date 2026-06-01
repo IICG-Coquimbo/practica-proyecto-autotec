@@ -109,6 +109,10 @@ def ejecutar_extraccion():
                             "electrico", "eléctrico"
                         ]:
                             combustible = texto
+                     try:
+                        foto_url = t.find_element(By.CSS_SELECTOR, "img.d3-photos-carousel__photo").get_attribute("src")
+                    except:
+                        foto_url = None
 
                     lista_autos.append({
                         "marca": marca,
@@ -119,6 +123,7 @@ def ejecutar_extraccion():
                         "ciudad": ciudad,
                         "url": url_auto,
                         "precio": precio,
+                        "foto_url": foto_url,                        
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO

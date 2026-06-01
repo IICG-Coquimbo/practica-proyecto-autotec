@@ -85,7 +85,17 @@ def ejecutar_extraccion(meta=500):
 
                     marca, modelo = separar_marca_modelo(titulo)
                     year, km, combustible, ciudad = extraer_info(info)
-
+                    
+                    try:
+                        img = bloque.find_element(By.CSS_SELECTOR, "div.thumbnail img.lazy")
+                        foto_url = (
+                            img.get_attribute("data-original")
+                            or img.get_attribute("src")
+                            or ""
+                        ).strip()
+                    except Exception:
+                        foto_url = ""
+                        
                     registro = {
                         "marca": marca,
                         "modelo": modelo,
@@ -95,10 +105,10 @@ def ejecutar_extraccion(meta=500):
                         "ciudad": ciudad,
                         "url": link,
                         "precio": precio,
+                        "foto_url": foto_url,
                         "usuario": NOMBRE,
                         "fecha_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": GRUPO,
-                        "fuente": "Emol"
                     }
 
                     datos_finales.append(registro)
@@ -108,7 +118,6 @@ def ejecutar_extraccion(meta=500):
                 except Exception:
                     continue
             
-            print(f"  ✅ Página {pagina} procesada ({total}/{meta})")
             pagina += 1
 
     finally:
