@@ -25,8 +25,6 @@ def procesar_y_guardar(lista_scrapers):
         try:
             datos = funcion()
             if datos and len(datos) > 0:
-                # 1. Aseguramos que cada dato tenga un campo _id (opcional pero recomendado)
-                # O podemos decirle a Spark qué campo usar como llave.
                 df = spark.createDataFrame(datos)
                 
                 # 2. Configuración de UPSERT
