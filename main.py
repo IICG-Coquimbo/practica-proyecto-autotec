@@ -1,110 +1,77 @@
+#Contenedor A
+
 import os
-import time
-import certifi
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from pymongo import MongoClient
+from dotenv import load_dotenv
+from pyspark.sql import SparkSession
+from autotec.scrapers import   scraper_dani, scraper_neiel, scraper_martin, scraper_belenandrades1, scraper_belenandrades3, scraper_belenandrades4, scraper_javiera, scraper_jocelyn, scraper_luz, scraper_martin2, scraper_belenandrades5
+# scraper_dani, scraper_neiel, scraper_martin, scraper_belenandrades1, scraper_belenandrades3, scraper_belenandrades4, scraper_javiera, scraper_jocelyn, #scraper_luz, scraper_martin2, scraper_belenandrades5
 
-# --- 1. IMPORTACIÓN DE TUS SCRAPERS ---
-# Asegúrate de que los archivos en /scrapers se llamen S1.py, S2.py, etc.
-from scrapers.S1 import scraper_tiendanimal
-from scrapers.S2 import scraper_kiwoko
-from scrapers.S3 import scraper_zooplus
-from scrapers.S4 import scraper_amazon_mascotas
-from scrapers.S5 import scraper_miscota
-from scrapers.S6 import scraper_bitiba
-from scrapers.S7 import scraper_superzoo
+# Configuración de Spark (Mantenlo fuera de las funciones para no recrear la sesión)
 
-# --- 2. LIMPIEZA DE PROCESOS ---
-try:
-    os.system("pkill -9 chrome")
-    os.system("pkill -9 chromedriver")
-    os.system("rm -rf /tmp/.com.google.Chrome.*")
-    os.system("rm -rf /tmp/.org.chromium.Chromium.*")
-    print("🧹 Limpieza de procesos y temporales completada.")
-except:
-    pass
+load_dotenv()
+MONGO_URI = os.getenv("MONGO_URI")
+spark = (
+    SparkSession.builder
+    .appName("AutoTec_Batch_Processing")
+    .config("spark.mongodb.write.connection.uri", MONGO_URI)
+    .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:10.1.1")
+    .getOrCreate()
+)
 
-# --- 3. CONFIGURACIÓN DEL DRIVER ---
-options = Options()
-options.binary_location = "/usr/bin/google-chrome"
-
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--disable-gpu")
-options.add_argument("--disable-software-rasterizer")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--remote-debugging-port=9222")
-options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-driver = None
-datos_totales = []
-
-try:
-    # Iniciar Navegador
-    driver = webdriver.Chrome(options=options)
-    print("🚀 Navegador iniciado correctamente.")
-
-    # --- 4. EJECUCIÓN COLECTIVA ---
-    print("🔍 Iniciando extracción masiva de rubro Mascotas...")
-    
-    # Ejecutamos cada scraper y extendemos la lista maestra
-    # Nota: Se pasa 'By' para que los scrapers lo usen internamente
-    try:
-        datos_totales.extend(scraper_tiendanimal(driver, By, paginas=15))
-        print(f"✅ Tiendanimal completado.")
-        
-        #datos_totales.extend(scraper_kiwoko(driver, By, paginas=15))
-        #print(f"✅ Kiwoko completado.")
-        
-          
-        #datos_totales.extend(scraper_amazon_mascotas(driver, By, paginas=15))
-        #print(f"✅ Amazon completado.")
-
-        #datos_totales.extend(scraper_zooplus(driver, By, paginas=1))
-        #print(f"✅ Zooplus completado.")
-        
-        #datos_totales.extend(scraper_bitiba(driver, By, paginas=10))
-        #print(f"✅ Bitiba completado.")
-        
-        #datos_totales.extend(scraper_miscota(driver, By, paginas=10))
-        #print(f"✅ Miscota completado.")
-
-        #datos_totales.extend(scraper_superzoo(driver, By, paginas=10))
-        #print(f"✅ Superzoo.")
-        
-    except Exception as e:
-        print(f"⚠️ Error durante la extracción de alguna fuente: {e}")
-
-    print(f"📊 Total capturado: {len(datos_totales)} registros.")
-
-    # --- 5. CARGA EN MONGO ATLAS ---
-    if datos_totales:
-        uri = "mongodb+srv://profe_vannessa:Ejemplo123@cluster0.kthdyh1.mongodb.net/?retryWrites=true&w=majority"
-        
-        client = MongoClient(uri, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
-        
+def procesar_y_guardar(lista_scrapers):
+    """Ejecuta scrapers y realiza un UPSERT en MongoDB para evitar duplicados"""
+    for nombre, funcion in lista_scrapers:
+        print(f"\n🚀 Procesando: {nombre}")
         try:
-            # Validar conexión
-            client.server_info() 
-            db = client["ProyectoSemana9"]
-            coleccion = db["Alimento_Mascotas_Raw"]
-            
-            print("📤 Subiendo datos a MongoDB Atlas...")
-            coleccion.insert_many(datos_totales)
-            print("✅ ¡Éxito! Datos cargados en la nube.")
-            
+            datos = funcion()
+            if datos and len(datos) > 0:
+                df = spark.createDataFrame(datos)
+                
+                # 2. Configuración de UPSERT
+                # 2. Configuración de UPSERT
+                df.write \
+                    .format("mongodb") \
+                    .mode("append") \
+                    .option("database", "proyecto_bigdata") \
+                    .option("collection", "bd_autos") \
+                    .option("operationType", "update") \
+                    .option("upsertDocument", "true") \
+                    .option("idFieldList", "url") \
+                    .save()
+                
+                print(f"✅ {nombre}: {len(datos)} registros procesados (actualizados/insertados) en MongoDB.")
+            else:
+                print(f"⚠️ {nombre}: No se obtuvieron datos.")
         except Exception as e:
-            print(f"❌ Error de conexión o subida a MongoDB: {e}")
-    else:
-        print("Empty 📭: No se recolectaron datos para subir.")
+            print(f"❌ Error en {nombre}: {e}")
+# --- DEFINICIÓN DE TANDAS ---
 
-except Exception as e:
-    print(f"❌ Error crítico en el sistema: {e}")
+# Tanda 1
+grupo_1 = [
+   ("Dani", scraper_dani.ejecutar_extraccion),
+    ("Neiel", scraper_neiel.ejecutar_extraccion),
+    ("Martin", scraper_martin.ejecutar_extraccion),
+    ("Belen1", scraper_belenandrades1.ejecutar_extraccion),
+    ("Belen3", scraper_belenandrades3.ejecutar_extraccion)
+]
 
-finally:
-    # El cierre del driver SIEMPRE debe ir al final de todo el proceso
-    if driver:
-        driver.quit()
-        print("🔒 Navegador cerrado correctamente.")
+# Tanda 2
+#grupo_2 = [
+#    ("Luz", scraper_luz.ejecutar_extraccion),
+#    ("Martin2", scraper_martin2.ejecutar_extraccion),
+#    ("Belen4", scraper_belenandrades4.ejecutar_extraccion),
+#    ("Jocelyn", scraper_jocelyn.ejecutar_extraccion),
+#    ("Javiera", scraper_javiera.ejecutar_extraccion),
+#    ("Belen5", scraper_belenandrades5.ejecutar_extraccion)
+
+#]
+
+# --- EJECUCIÓN ---
+# Puedes comentar una línea para ejecutar solo la otra
+print("Iniciando Tanda 1...")
+procesar_y_guardar(grupo_1)
+
+#print("Iniciando Tanda 2...")
+#procesar_y_guardar(grupo_2)
+print("\n¡Proceso de carga parcial completado!")
+spark.stop()
