@@ -4,7 +4,11 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+<<<<<<< HEAD
 # --- Variables globales --
+=======
+# --- Variables globales ---
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
@@ -87,12 +91,15 @@ def ejecutar_extraccion(meta_autos=500):
                     except:
                         pass
 
+<<<<<<< HEAD
                     try:
                         img = bloque.find_element(By.CSS_SELECTOR, "div#grid-product-card-img img")
                         foto_url = img.get_attribute("src") or ""
                     except Exception:
                         foto_url = ""
 
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     auto = {
                         "marca": marca,
                         "modelo": modelo,
@@ -102,10 +109,17 @@ def ejecutar_extraccion(meta_autos=500):
                         "ciudad": "Chile (Sucursal Difor)",
                         "url": url_auto,
                         "precio": precio,
+<<<<<<< HEAD
                         "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO,
+=======
+                        "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "grupo": NOMBRE_GRUPO,
+                        "usuario": USUARIO,
+                        "fuente": "Difor"
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     }
 
                     lista_autos.append(auto)
@@ -113,6 +127,10 @@ def ejecutar_extraccion(meta_autos=500):
                 except Exception:
                     continue
             
+<<<<<<< HEAD
+=======
+            print(f"  ✅ Página {pagina} completada ({len(lista_autos)}/{meta_autos})")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             pagina += 1
 
     except Exception as e:
@@ -122,4 +140,18 @@ def ejecutar_extraccion(meta_autos=500):
         driver.quit()
         print("🔒 Navegador de Martin cerrado.")
 
+<<<<<<< HEAD
     return lista_autos
+=======
+    return lista_autos
+
+
+
+
+
+
+
+
+
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25

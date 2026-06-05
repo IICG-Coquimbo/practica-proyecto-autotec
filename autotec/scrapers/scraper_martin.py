@@ -9,7 +9,11 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from pymongo import MongoClient
 
+<<<<<<< HEAD
 # --- Variables globales --
+=======
+# --- Variables globales ---
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Martin"
 
@@ -22,7 +26,11 @@ def limpiar_numero(texto):
 
 # --- Función principal de extracción ---
 def ejecutar_extraccion():
+<<<<<<< HEAD
     URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/"
+=======
+    URL_BASE = "https://seminuevos.aspillagahornauer.cl/stock-seminuevos/page/"
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     lista_autos = []
 
     options = Options()
@@ -32,7 +40,11 @@ def ejecutar_extraccion():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
+<<<<<<< HEAD
     driver = webdriver.Chrome(options=options)
+=======
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     print("🌐 Empezó extracción")
 
     try:
@@ -89,11 +101,14 @@ def ejecutar_extraccion():
 
                     precio_elementos = tarjeta.find_elements(By.CSS_SELECTOR, "span.heading-font")
                     precio_txt = precio_elementos[0].text.strip() if precio_elementos else "0"
+<<<<<<< HEAD
                     try:
                         foto = tarjeta.find_element(By.CSS_SELECTOR, "img.img-responsive")
                         foto_url = foto.get_attribute("src")
                     except:
                         foto_url = None
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
                     auto = {
                         "marca": marca,
@@ -104,7 +119,10 @@ def ejecutar_extraccion():
                         "ciudad": ciudad,
                         "url": url_auto,
                         "precio": limpiar_numero(precio_txt),
+<<<<<<< HEAD
                         "foto_url": foto_url,
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO

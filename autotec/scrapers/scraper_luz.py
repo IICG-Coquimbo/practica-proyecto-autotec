@@ -5,7 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+<<<<<<< HEAD
 # ================= FUNCIONES DE APOYO ================
+=======
+# ================= FUNCIONES DE APOYO =================
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
 def limpiar_numero(texto):
     return int(re.sub(r"[^\d]", "", texto)) if texto else 0
@@ -85,6 +89,7 @@ def ejecutar_extraccion(meta=500):
 
                     marca, modelo = separar_marca_modelo(titulo)
                     year, km, combustible, ciudad = extraer_info(info)
+<<<<<<< HEAD
                     
                     try:
                         img = bloque.find_element(By.CSS_SELECTOR, "div.thumbnail img.lazy")
@@ -96,6 +101,9 @@ def ejecutar_extraccion(meta=500):
                     except Exception:
                         foto_url = ""
                         
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     registro = {
                         "marca": marca,
                         "modelo": modelo,
@@ -105,10 +113,17 @@ def ejecutar_extraccion(meta=500):
                         "ciudad": ciudad,
                         "url": link,
                         "precio": precio,
+<<<<<<< HEAD
                         "foto_url": foto_url,
                         "usuario": NOMBRE,
                         "fecha_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": GRUPO,
+=======
+                        "usuario": NOMBRE,
+                        "fecha_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "grupo": GRUPO,
+                        "fuente": "Emol"
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     }
 
                     datos_finales.append(registro)
@@ -118,6 +133,10 @@ def ejecutar_extraccion(meta=500):
                 except Exception:
                     continue
             
+<<<<<<< HEAD
+=======
+            print(f"  ✅ Página {pagina} procesada ({total}/{meta})")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             pagina += 1
 
     finally:

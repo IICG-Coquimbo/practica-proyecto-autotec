@@ -23,7 +23,11 @@ def ejecutar_extraccion():
     NOMBRE_GRUPO = "autotec"
     USUARIO = "dani"
 
+<<<<<<< HEAD
     # --- NAVEGADOR --
+=======
+    # --- NAVEGADOR ---
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     options = Options()
     options.binary_location = "/usr/bin/google-chrome"
     options.add_argument("--no-sandbox")
@@ -109,10 +113,13 @@ def ejecutar_extraccion():
                             "electrico", "eléctrico"
                         ]:
                             combustible = texto
+<<<<<<< HEAD
                      try:
                         foto_url = t.find_element(By.CSS_SELECTOR, "img.d3-photos-carousel__photo").get_attribute("src")
                     except:
                         foto_url = None
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
                     lista_autos.append({
                         "marca": marca,
@@ -123,7 +130,10 @@ def ejecutar_extraccion():
                         "ciudad": ciudad,
                         "url": url_auto,
                         "precio": precio,
+<<<<<<< HEAD
                         "foto_url": foto_url,                        
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO

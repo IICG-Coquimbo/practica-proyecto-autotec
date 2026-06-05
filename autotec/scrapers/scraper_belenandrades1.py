@@ -1,10 +1,17 @@
 import os
 import time
+<<<<<<< HEAD
 import re
 from selenium import webdriver # Faltaba este import
 from selenium.webdriver.chrome.options import Options # Faltaba este import
 from selenium.webdriver.common.by import By
 #
+=======
+from selenium import webdriver # Faltaba este import
+from selenium.webdriver.chrome.options import Options # Faltaba este import
+from selenium.webdriver.common.by import By
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 # =========================
 # LIMPIEZA (Fuera de la función para que corra al importar)
 # =========================
@@ -35,11 +42,19 @@ def ejecutar_extraccion():
         driver = webdriver.Chrome(options=options)
         print("Navegador iniciado correctamente para Callegari.")
 
+<<<<<<< HEAD
         limite_paginas = 10 # Bajamos el límite para pruebas, luego puedes subirlo a 10
+=======
+        limite_paginas = 3 # Bajamos el límite para pruebas, luego puedes subirlo a 10
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
         URL_BASE = "https://callegari.cl/seminuevos/page/{}"
 
         for nivel_pagina in range(1, limite_paginas + 1):
             url_pagina = URL_BASE.format(nivel_pagina)
+<<<<<<< HEAD
+=======
+            print(f"Buscando en: {url_pagina}")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
             try:
                 driver.get(url_pagina)
@@ -70,6 +85,7 @@ def ejecutar_extraccion():
                             combustible = partes[3] if len(partes) > 3 else "N/A"
                         else:
                             year = kilometraje = combustible = "N/A"
+<<<<<<< HEAD
 
                         try:
                             div_imagen = bloque.find_element(By.CSS_SELECTOR, "div.u-img")
@@ -79,6 +95,8 @@ def ejecutar_extraccion():
                             foto_url = match.group(1) if match else ""
                         except Exception:
                             foto_url = ""
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                         
                         lista_autos.append({
                             "marca":         marca,
@@ -89,7 +107,10 @@ def ejecutar_extraccion():
                             "ciudad":        "N/A",
                             "url":           url_auto,
                             "precio":        precio,
+<<<<<<< HEAD
                             "foto_url":      foto_url,
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                             "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                             "grupo":         NOMBRE_GRUPO,
                             "usuario":       USUARIO
@@ -98,6 +119,10 @@ def ejecutar_extraccion():
                     except Exception:
                         continue
 
+<<<<<<< HEAD
+=======
+                print(f"   Acumulado total: {len(lista_autos)} autos.")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                 time.sleep(2)
             
             except Exception as e:

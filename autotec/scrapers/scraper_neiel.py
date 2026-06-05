@@ -10,7 +10,11 @@ from selenium.webdriver.support import expected_conditions as EC
 
 NOMBRE_GRUPO = "AutoTec"
 USUARIO = "Neiel C"
+<<<<<<< HEAD
 #
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
 def limpiar_numero(texto):
     if not texto:
@@ -113,11 +117,14 @@ def ejecutar_extraccion():
                         precio_txt = "0"
 
                     precio = limpiar_numero(precio_txt)
+<<<<<<< HEAD
                     try:
                         img_elemento = bloque.find_element(By.CSS_SELECTOR, "figure.listing-card__image img")
                         foto_url = img_elemento.get_attribute("content") or img_elemento.get_attribute("src")
                     except Exception:
                         foto_url = ""
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
                     auto = {
                      #  "identificador": nombre.strip(),
@@ -129,7 +136,10 @@ def ejecutar_extraccion():
                         "ciudad": ciudad,
                         "url": url_auto,
                         "precio": precio,
+<<<<<<< HEAD
                         "foto_url": foto_url,
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO

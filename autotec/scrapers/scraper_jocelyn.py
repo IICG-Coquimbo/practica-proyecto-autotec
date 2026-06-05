@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 
 
+<<<<<<< HEAD
 # ========================
 # FUNCIONES AUXILIARES
 # =========================
@@ -17,11 +18,25 @@ def limpiar_numero(texto):
         return 0
     num = re.sub(r"[^\d]", "", texto)
     return int(num) if num else 0
+=======
+# =========================
+# FUNCIONES DE LIMPIEZA
+# =========================
+def limpiar_numero(texto):
+    if not texto:
+        return None
+    num = re.sub(r"[^\d]", "", texto)
+    return int(num) if num else None
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
 
 def extraer_year(texto):
     match = re.search(r"\b(19[8-9][0-9]|20[0-2][0-9])\b", texto)
+<<<<<<< HEAD
     return int(match.group()) if match else 0
+=======
+    return int(match.group()) if match else None
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
 
 def normalizar_combustible(texto):
@@ -43,7 +58,11 @@ def separar_marca_modelo(titulo):
     partes = titulo.split()
 
     if len(partes) == 0:
+<<<<<<< HEAD
         return "", ""
+=======
+        return None, None
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
     marca = partes[0].lower()
     modelo = " ".join(partes[1:]).lower()
@@ -63,9 +82,14 @@ def extraer_ciudad(texto):
         "Pudahuel", "Peñalolén", "Vitacura", "Lo Barnechea"
     ]
 
+<<<<<<< HEAD
     texto_lower = texto.lower()
     for ciudad in ciudades:
         if ciudad.lower() in texto_lower:
+=======
+    for ciudad in ciudades:
+        if ciudad.lower() in texto.lower():
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             return ciudad.lower()
 
     return "santiago"
@@ -96,12 +120,20 @@ def iniciar_driver():
 
 
 # =========================
+<<<<<<< HEAD
 # EXTRAER BLOQUES
+=======
+# EXTRACCIÓN DE BLOQUES
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 # =========================
 def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
     bloques = driver.find_elements(By.CSS_SELECTOR, "div.MuiGrid-root.MuiGrid-item")
 
     for bloque in bloques:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
         if len(autos_extraidos) >= max_autos:
             break
 
@@ -117,8 +149,13 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
             lineas = [linea.strip() for linea in texto.split("\n") if linea.strip()]
 
             titulo = None
+<<<<<<< HEAD
             precio = 0
             kilometraje = 0
+=======
+            precio = None
+            kilometraje = None
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
             for linea in lineas:
                 if re.search(r"\b(19[8-9][0-9]|20[0-2][0-9])\b", linea):
@@ -144,6 +181,7 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
             ciudad = extraer_ciudad(texto)
 
             try:
+<<<<<<< HEAD
                 img = bloque.find_element(By.CSS_SELECTOR, "img.object-cover")
             
                 foto_url = (
@@ -180,6 +218,14 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
 
             if not link:
                 continue
+=======
+                link = bloque.find_element(By.TAG_NAME, "a").get_attribute("href")
+            except:
+                link = None
+
+            if not link:
+                link = f"sin-url-{marca}-{modelo}-{year}-{precio}-{kilometraje}"
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
             if link in links_vistos:
                 continue
@@ -187,6 +233,7 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
             links_vistos.add(link)
 
             auto = {
+<<<<<<< HEAD
                 "marca": marca or "",
                 "modelo": modelo or "",
                 "year": year or 0,
@@ -205,6 +252,33 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
 
         except Exception as e:
             print(f"Error en bloque: {e}")
+=======
+                "marca": marca,
+                "modelo": modelo,
+                "year": year,
+                "kilometraje": kilometraje,
+                "combustible": combustible,
+                "ciudad": ciudad,
+                "url": link,
+                "precio": precio,
+                "fecha_captura": datetime.now(),
+                "grupo": "autotec",
+                "usuario": "jocelyn"
+            }
+
+            if all([
+                auto["marca"],
+                auto["modelo"],
+                auto["year"],
+                auto["kilometraje"],
+                auto["ciudad"],
+                auto["url"],
+                auto["precio"]
+            ]):
+                autos_extraidos.append(auto)
+
+        except:
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             continue
 
 
@@ -212,12 +286,20 @@ def extraer_bloques(driver, autos_extraidos, links_vistos, max_autos):
 # FUNCIÓN PRINCIPAL
 # =========================
 def ejecutar_extraccion(max_autos=500):
+<<<<<<< HEAD
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     os.system("pkill -9 chrome")
     os.system("pkill -9 chromedriver")
 
     print("🔎 Iniciando scraping Bruno Fritsch...")
 
     driver = iniciar_driver()
+<<<<<<< HEAD
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     autos_extraidos = []
     links_vistos = set()
 
@@ -228,6 +310,10 @@ def ejecutar_extraccion(max_autos=500):
         paginas_sin_datos = 0
 
         while len(autos_extraidos) < max_autos and pagina <= 45:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             try:
                 driver.get(f"{url_base}?page={pagina}")
                 time.sleep(4)
@@ -236,7 +322,11 @@ def ejecutar_extraccion(max_autos=500):
                 try:
                     driver.execute_script("window.stop();")
                     time.sleep(2)
+<<<<<<< HEAD
                 except Exception:
+=======
+                except:
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     pass
 
             cantidad_antes = len(autos_extraidos)
@@ -250,7 +340,10 @@ def ejecutar_extraccion(max_autos=500):
                     break
 
             cantidad_despues = len(autos_extraidos)
+<<<<<<< HEAD
             print(f"   Acumulado: {cantidad_despues}")
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
             if cantidad_despues == cantidad_antes:
                 paginas_sin_datos += 1
@@ -258,7 +351,10 @@ def ejecutar_extraccion(max_autos=500):
                 paginas_sin_datos = 0
 
             if paginas_sin_datos >= 5:
+<<<<<<< HEAD
                 print("⚠️ Se detectaron varias páginas sin datos nuevos. Fin de extracción.")
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                 break
 
             pagina += 1
@@ -269,4 +365,16 @@ def ejecutar_extraccion(max_autos=500):
     print("\n📊 RESULTADO FINAL")
     print(f"🚗 Autos extraídos: {len(autos_extraidos)}")
 
+<<<<<<< HEAD
     return autos_extraidos
+=======
+    return autos_extraidos
+
+
+# =========================
+# EJECUCIÓN LOCAL
+# =========================
+if __name__ == "__main__":
+    datos = ejecutar_extraccion(max_autos=500)
+    print("Total:", len(datos))
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25

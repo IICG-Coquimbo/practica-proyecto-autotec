@@ -5,7 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
+<<<<<<< HEAD
 # ========================
+=======
+# =========================
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 # CONFIGURACIÓN PROYECTO
 # =========================
 NOMBRE_GRUPO = "AutoTec"
@@ -32,6 +36,10 @@ def ejecutar_extraccion(max_paginas=30):
 
     try:
         for pagina in range(1, max_paginas + 1):
+<<<<<<< HEAD
+=======
+            print(f"🔎 [Salazar Israel] Extrayendo página {pagina}...")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             driver.get(URL_BASE.format(pagina))
             time.sleep(4) # Tiempo para carga de JavaScript
 
@@ -92,6 +100,7 @@ def ejecutar_extraccion(max_paginas=30):
                     if not year or precio_final == 0:
                         continue
 
+<<<<<<< HEAD
                     try:
                         img = bloque.find_element(By.CSS_SELECTOR, "img.object-cover")
                         
@@ -106,6 +115,8 @@ def ejecutar_extraccion(max_paginas=30):
                     except Exception:
                         foto_url = ""
 
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     lista_autos.append({
                         "marca": marca,
                         "modelo": modelo,
@@ -113,10 +124,17 @@ def ejecutar_extraccion(max_paginas=30):
                         "kilometraje": int(km_texto),
                         "url": url_auto,
                         "precio": precio_final,
+<<<<<<< HEAD
                         "foto_url": foto_url,
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo": NOMBRE_GRUPO,
                         "usuario": USUARIO,
+=======
+                        "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "grupo": NOMBRE_GRUPO,
+                        "usuario": USUARIO,
+                        "fuente": "salazarisrael.cl"
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     })
 
                 except Exception:

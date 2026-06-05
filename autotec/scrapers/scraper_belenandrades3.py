@@ -1,11 +1,18 @@
 import os
+<<<<<<< HEAD
 import re
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 import time
 from selenium import webdriver # Faltaba
 from selenium.webdriver.chrome.options import Options # Faltaba
 from selenium.webdriver.common.by import By
 
+<<<<<<< HEAD
 # ========================
+=======
+# =========================
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 # LIMPIEZA
 # =========================
 os.system("pkill -9 chrome")
@@ -38,6 +45,10 @@ def ejecutar_extraccion():
 
         for pagina in range(1, limite_paginas + 1):
             url = URL_BASE.format(pagina)
+<<<<<<< HEAD
+=======
+            print(f"Buscando en: {url}")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             
             try:
                 driver.get(url)
@@ -72,6 +83,7 @@ def ejecutar_extraccion():
                         partes_nombre = nombre.split(" ", 1)
                         marca = partes_nombre[0] if len(partes_nombre) > 0 else "N/A"
                         modelo = partes_nombre[1] if len(partes_nombre) > 1 else "N/A"
+<<<<<<< HEAD
                         try:
                             img = bloque.find_element(By.CSS_SELECTOR, "div.vehica-car-card__image img")
                             
@@ -88,6 +100,8 @@ def ejecutar_extraccion():
                         
                         except Exception:
                             foto_url = ""
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
                         lista_autos.append({
                             "marca": marca,
@@ -98,7 +112,10 @@ def ejecutar_extraccion():
                             "ciudad": "N/A",
                             "url": url_auto,
                             "precio": precio,
+<<<<<<< HEAD
                             "foto_url": foto_url,
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                             "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                             "grupo": NOMBRE_GRUPO,
                             "usuario": USUARIO
@@ -106,6 +123,10 @@ def ejecutar_extraccion():
                     except:
                         continue
                 
+<<<<<<< HEAD
+=======
+                print(f"   Página {pagina} lista. Acumulado: {len(lista_autos)}")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
 
             except Exception as e:
                 print(f"Error en página {pagina}: {e}")

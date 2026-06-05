@@ -8,7 +8,11 @@ def ejecutar_extraccion():
     USUARIO = "Belen A"
     lista_autos = []
 
+<<<<<<< HEAD
     # Headers para simular un navegador rea
+=======
+    # Headers para simular un navegador real
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
@@ -74,6 +78,7 @@ def ejecutar_extraccion():
                     except:
                         year = kilometraje = combustible = "N/A"
 
+<<<<<<< HEAD
                     # Foto URL
                     # Foto URL
                     try:
@@ -82,16 +87,24 @@ def ejecutar_extraccion():
                     except:
                         foto_url = ""
 
+=======
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                     lista_autos.append({
                         "marca":         marca,
                         "modelo":        modelo,
                         "year":          year,
                         "kilometraje":   kilometraje,
                         "combustible":   combustible,
+<<<<<<< HEAD
                         "ciudad":        "Cerrillos",
                         "url":           url_auto,
                         "precio":        precio,
                         "foto_url": foto_url,
+=======
+                        "ciudad":        "Cerrillos, Santiago",
+                        "url":           url_auto,
+                        "precio":        precio,
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
                         "fecha_captura": time.strftime("%Y-%m-%d %H:%M:%S"),
                         "grupo":         NOMBRE_GRUPO,
                         "usuario":       USUARIO
@@ -100,6 +113,10 @@ def ejecutar_extraccion():
                 except Exception:
                     continue
 
+<<<<<<< HEAD
+=======
+            print(f"  ✅ Página {nivel_pagina} lista. Acumulado: {len(lista_autos)} autos.")
+>>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
             time.sleep(1)
 
         except Exception as e:
