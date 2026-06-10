@@ -6,6 +6,8 @@ services:
       - "8888:8888"   # Jupyter Lab
       - "6080:6080"   # Visualizador del Scraper (VNC)
       - "4040:4040"   # Spark UI
+      - "8501:8501" 		  # Acceso a Streamlite
+
     volumes:
       - .:/home/jovyan/work
     environment:
