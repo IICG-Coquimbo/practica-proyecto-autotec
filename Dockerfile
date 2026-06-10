@@ -55,3 +55,6 @@ EXPOSE 8888 5900 6080 4040
 # Iniciamos como root para evitar el error de setuid de la sesión anterior
 USER root
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+# Instalamos Streamlit y dependencias visuales usando pip
+RUN pip install --no-cache-dir streamlit seaborn openpyxl
