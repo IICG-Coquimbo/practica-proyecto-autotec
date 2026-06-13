@@ -1,0 +1,2 @@
+modelo,mae,rmse,r2,mejores_parametros
+RandomForestRegressor,2768339.0854271357,4893661.213834106,0.7384935433441373,"{'model__max_depth': None, 'model__min_samples_leaf': 1, 'model__min_samples_split': 2, 'model__n_estimators': 200}"
