@@ -1,0 +1,2 @@
+modelo,mae,rmse,r2,parametros
+HistGradientBoostingRegressor,3390798.42437019,5372485.368438547,0.6848153206686245,"{""max_iter"":300, ""learning_rate"":0.05, ""max_depth"":8, ""min_samples_leaf"":20}"
