@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🚗 AutoTec — Análisis del Mercado Automotriz Chileno
 
 **Proyecto final · Big Data para la Toma de Decisiones · IICG 2026**
@@ -257,4 +256,3 @@ Ejemplo de documento JSON:
   "usuario": "dani"
 }
 ```
->>>>>>> 51be041d3611d942b850bc2b7b6f833b32258a25
