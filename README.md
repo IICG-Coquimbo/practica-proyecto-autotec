@@ -82,7 +82,8 @@ AutoTec/
 │   ├── definicion_predictiva/     # Definición de variable objetivo y metadatos
 │   ├── pipeline_contenedores/     # Limpieza y normalización con PySpark
 │   ├── refinamiento_datos/        # Tratamiento de veracidad y arreglos retroalimentacion
-│   └── scrapers/                  # Scripts de extracción por fuente
+│── scrapers/                      # Scripts de extracción por fuente
+
 └── .env                           # Variables de entorno (MONGO_URI) — no subir al repo
 ```
 
