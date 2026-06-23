@@ -55,20 +55,17 @@ El flujo general es: **Scraping → MongoDB Atlas (crudo) → PySpark (limpieza)
 
 ## Resumen de Indicadores Clave (KPIs)*
 
-| Indicador | Valor |
-|---|---|
-| Total de registros válidos | 1.988 |
-| Precio promedio del mercado | $16.450.599 CLP |
-| Kilometraje promedio | 71.070 km |
-| Año promedio de fabricación | 2021 |
-| Antigüedad promedio | 5 años |
-| Correlación Precio–Kilometraje | -0.233 |
-| Correlación Precio–Año | +0.236 |
-| Correlación Kilometraje–Antigüedad | +0.700 |
-| Anomalías detectadas en precio | 126 (6,34%) |
-| Anomalías detectadas en kilometraje | 49 (2,46%) |
-| Silhouette Score K-Means (k=4) | 0.446 |
-| Número de clústeres seleccionados | 4 |
+| Nivel           | KPI                                              | Objetivo                                                                                                                             | Frecuencia | Datos utilizados                                                     | Indicador principal                                                             |
+| --------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Estratégico** | Concentración del mercado por marca              | Identificar el dominio y participación de las principales marcas dentro del mercado de vehículos usados.                             | Semestral  | Marca, cantidad de publicaciones.                                    | % de participación de mercado por marca.                                        |
+| **Estratégico** | Tendencia del precio promedio de vehículos       | Analizar la evolución del valor promedio de los vehículos a través del tiempo para detectar alzas, caídas o estabilidad del mercado. | Anual      | Año, precio.                                                         | Precio promedio anual.                                                          |
+| **Estratégico** | Pérdida de valor por kilómetro                   | Medir el impacto del uso del vehículo sobre su valor comercial y cuantificar la depreciación asociada al kilometraje.                | Trimestral | Kilometraje, precio.                                                 | Precio promedio por tramo de kilometraje.                                       |
+| **Táctico**     | Valor de mercado por combustible y nivel de uso  | Identificar qué combinaciones de combustible y nivel de uso generan mayor o menor valor comercial.                                   | Mensual    | Precio, combustible, rango de kilometraje.                           | Precio promedio por combustible y nivel de uso.                                 |
+| **Táctico**     | Posicionamiento de precios por marca             | Comparar el rango de precios y el precio promedio de cada marca para identificar posicionamiento competitivo y dispersión comercial. | Mensual    | Marca, precio mínimo, promedio y máximo.                             | Banda de precios por marca.                                                     |
+| **Táctico**     | Retención de valor por marca                     | Determinar qué marcas conservan mejor su valor relativo respecto al mercado general.                                                 | Mensual    | Marca, precio promedio de marca, precio promedio mercado.            | Índice de retención de valor (base mercado = 100).                              |
+| **Operacional** | Alertas de publicaciones fuera de rango estimado | Detectar vehículos cuyo precio publicado se desvía significativamente del valor esperado según el modelo predictivo.                 | Diaria     | Precio real, precio estimado, kilometraje, año, marca y combustible. | % de vehículos fuera de rango, alertas moderadas y críticas.                    |
+| **Operacional** | Matriz de alertas por antigüedad y precio        | Identificar publicaciones potencialmente sobrevaloradas, especialmente vehículos antiguos con precios altos.                         | Diaria     | Antigüedad del vehículo, precio, marca, modelo y ciudad.             | Clasificación por cuadrantes: Normal, Gama Alta, Observar y Alerta de Revisión. |
+
 
 ---
 
