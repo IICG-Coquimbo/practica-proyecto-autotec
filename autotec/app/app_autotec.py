@@ -10,7 +10,12 @@ from pathlib import Path
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # 1. Configuración de la página
 st.set_page_config(page_title="Dashboard Automotriz Ejecutivo", layout="wide")
@@ -716,13 +721,22 @@ with tab_inicio:
     
         st.markdown("""
         <div class="card">
-            <div class="card-title">Variables de precio</div>
-            <div class="card-item"><b>precio:</b> Precio publicado del vehículo.</div>
-            <div class="card-item"><b>categoria_precio:</b> Segmento o rango de precio.</div>
+            <div class="card-title">Contexto de mercado</div>
+            <div class="card-item"><b>combustible:</b> Tipo de combustible.</div>
+            <div class="card-item"><b>ciudad:</b> Ciudad de publicación.</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">Variables de precio</div>
+            <div class="card-item"><b>precio:</b> Precio publicado del vehículo.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+
         st.markdown("""
         <div class="card">
             <div class="card-title">Uso y estado del vehículo</div>
@@ -732,16 +746,7 @@ with tab_inicio:
         </div>
         """, unsafe_allow_html=True)
     
-        st.markdown("<br>", unsafe_allow_html=True)
-    
-        st.markdown("""
-        <div class="card">
-            <div class="card-title">Contexto de mercado</div>
-            <div class="card-item"><b>combustible:</b> Tipo de combustible.</div>
-            <div class="card-item"><b>ciudad:</b> Ciudad de publicación.</div>
-            <div class="card-item"><b>fecha_captura:</b> Fecha de captura del registro.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        
 # ==========================================
 # PESTAÑA 1: NIVEL ESTRATÉGICO
 # ==========================================
@@ -1092,7 +1097,22 @@ with tab_tac:
     fig.update_xaxes(showgrid=False)
     
     st.plotly_chart(fig, use_container_width=True)
-
+    st.markdown("""
+    <div style="
+        background: #FAFAF9;
+        border: 1px solid #D6E2F0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        color: #002855;
+        font-size: 0.96rem;
+        line-height: 1.6;
+    ">
+    <b style="color:#002855;">Interpretación: </b><br>
+    <span>El tipo de combustible tiene un impacto directo y diferenciado sobre el precio según el nivel de uso del vehículo.  En todos los tipos de combustible, el paso del rango Bajo al Alto implica una caída significativa de precio, confirmando que el nivel de uso es un factor de depreciación transversal, independiente del tipo de motor.</span><br>
+    </div>
+    """, unsafe_allow_html=True)
+    
     st.write(" ")
     st.divider()
     # =========================
@@ -1403,71 +1423,107 @@ with tab_op:
     # ============================
     # KPI 1
     # ============================    
+    
     st.header("1. Alertas de publicaciones fuera de rango estimado")
     st.caption(
         "KPI: Desviación entre precio real y precio estimado | Objetivo: Detectar vehículos cuyo precio publicado se desvía significativamente "
         "del valor esperado según un modelo de predicción | Frecuencia: diaria."
     )
-    columnas_modelo = ["kilometraje", "year", "marca", "combustible", "precio"]
-    df_modelo = df[columnas_modelo].dropna().copy()
     
-    X = df_modelo[["kilometraje", "year", "marca", "combustible"]]
-    X = pd.get_dummies(X, columns=["marca", "combustible"], drop_first=True)
-    X = X.astype(float)   
-    y = df_modelo["precio"].astype(float).values
-    X_b = np.c_[np.ones((len(X), 1)), X.values]
-    theta_best = np.linalg.inv(X_b.T.dot(X_b)).dot(X_b.T).dot(y)
-    y_pred = X_b.dot(theta_best)
-
-    errores = y - y_pred
-    errores_abs = np.abs(errores)
+    columnas_modelo = [
+        "marca", "modelo", "year", "kilometraje", "combustible", "ciudad",
+        "uso_anual_estimado", "rango_kilometraje", "precio"
+    ]
     
-    mae = np.mean(errores_abs)
-    rmse = np.sqrt(np.mean(errores ** 2))
-
-    st.write("Este KPI utiliza modelo de regresión para estimar el precio esperado de cada vehículo a partir de sus características principales: kilometraje, año, marca y tipo de combustible.")
-    st.write("Luego compara el precio real publicado con el precio estimado por el modelo. La diferencia entre ambos permite detectar publicaciones potencialmente fuera de rango, ya sea por sobrevaloración o subvaloración.")
-
+    df_modelo = df[columnas_modelo].dropna(subset=["precio", "marca", "modelo", "year", "kilometraje"]).copy()
+    
+    anio_actual = pd.Timestamp.today().year
+    df_modelo["antiguedad"] = anio_actual - df_modelo["year"]
+    df_modelo["precio_log"] = np.log1p(df_modelo["precio"])
+    
+    features = [
+        "marca", "modelo", "combustible", "ciudad", "rango_kilometraje",
+        "year", "kilometraje", "uso_anual_estimado", "antiguedad"
+    ]
+    
+    X = df_modelo[features].copy()
+    y = df_modelo["precio_log"].copy()
+    
+    cat_features = ["marca", "modelo", "combustible", "ciudad", "rango_kilometraje"]
+    num_features = ["year", "kilometraje", "uso_anual_estimado", "antiguedad"]
+    
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", Pipeline([
+                ("imputer", SimpleImputer(strategy="median"))
+            ]), num_features),
+            ("cat", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore"))
+            ]), cat_features)
+        ]
+    )
+    
+    modelo = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("model", RandomForestRegressor(
+            n_estimators=250,
+            max_depth=14,
+            min_samples_split=8,
+            min_samples_leaf=3,
+            random_state=42,
+            n_jobs=-1
+        ))
+    ])
+    
+    modelo.fit(X, y)
+    y_pred_log = modelo.predict(X)
+    y_pred = np.expm1(y_pred_log)
+    
     df_alertas = df_modelo.copy()
-    df_alertas["Precio real"] = y
+    df_alertas["Precio real"] = df_alertas["precio"]
     df_alertas["Precio estimado"] = y_pred
     df_alertas["Diferencia"] = df_alertas["Precio real"] - df_alertas["Precio estimado"]
     df_alertas["Diferencia absoluta"] = np.abs(df_alertas["Diferencia"])
+    df_alertas["Error porcentual"] = (
+        df_alertas["Diferencia absoluta"] / df_alertas["Precio estimado"].clip(lower=1)
+    ) * 100
     
-    umbral_aceptable = mae
-    umbral_moderado = 2 * mae
+    mae = mean_absolute_error(df_alertas["Precio real"], df_alertas["Precio estimado"])
+    rmse = np.sqrt(mean_squared_error(df_alertas["Precio real"], df_alertas["Precio estimado"]))
+    r2 = r2_score(df_alertas["Precio real"], df_alertas["Precio estimado"])
     
-    def clasificar_riesgo(diff_abs):
-        if diff_abs <= umbral_aceptable:
+    def clasificar_riesgo(row):
+        err_pct = row["Error porcentual"]
+    
+        if err_pct < 5:
             return "Aceptable"
-        elif diff_abs <= umbral_moderado:
+        elif err_pct <= 15:
             return "Moderado"
         else:
             return "Crítico"
     
-    df_alertas["Nivel de riesgo"] = df_alertas["Diferencia absoluta"].apply(clasificar_riesgo)
+    df_alertas["Nivel de riesgo"] = df_alertas.apply(clasificar_riesgo, axis=1)
     
     df_alertas["Tipo de desvío"] = df_alertas["Diferencia"].apply(
         lambda x: "Sobrevalorado" if x > 0 else "Subvalorado"
     )
-
-    fuera_rango = (df_alertas["Nivel de riesgo"] != "Aceptable").mean() * 100
-    df_riesgo = (
-        df_alertas["Nivel de riesgo"]
-        .value_counts()
-        .reindex(["Aceptable", "Moderado", "Crítico"], fill_value=0)
-        .reset_index()
+    
+    st.write(
+        "Este KPI utiliza un modelo predictivo para estimar el precio esperado de cada vehículo considerando marca, modelo, año, kilometraje, combustible, ciudad y nivel de uso."
+    )
+    st.write(
+        "Luego compara el precio real con el estimado y clasifica la publicación según su error porcentual, lo que permite detectar alertas comerciales de manera más realista."
     )
     
-    df_riesgo.columns = ["Nivel de riesgo", "Cantidad"]
-    df_riesgo["Porcentaje"] = (df_riesgo["Cantidad"] / len(df_alertas) * 100).round(1).astype(str) + "%"
-
-    st.header("Métricas del modelo de predicción")   
+    st.subheader("Métricas del modelo")
+    
     total_criticos = (df_alertas["Nivel de riesgo"] == "Crítico").sum()
     total_moderados = (df_alertas["Nivel de riesgo"] == "Moderado").sum()
     porc_fuera_rango = (df_alertas["Nivel de riesgo"] != "Aceptable").mean() * 100
-    porc_sobrevalorados = (df_alertas["Diferencia"] > 0).mean() * 100    
-    col1, col2, col3 = st.columns(3)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
         st.markdown(f"""
         <div class="kpi-card">
@@ -1487,15 +1543,22 @@ with tab_op:
     with col3:
         st.markdown(f"""
         <div class="kpi-card">
-            <div class="kpi-label">Alertas moderadas</div>
-            <div class="kpi-value">{f"{total_moderados:,}".replace(",", ".")}</div>
+            <div class="kpi-label">MAE</div>
+            <div class="kpi-value">${mae:,.0f}</div>
         </div>
         """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">R² del modelo</div>
+            <div class="kpi-value">{r2:.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.write(" ")
+    st.write(" ")
 
-    st.write("    ")
-    st.write("- MAE(Error Absoluto Promedio): La magnitud promedio de los errores en el conjunto de predicciones, en pesos.")
-        
-    st.write("   ")     
     st.markdown("""
     <div style="
         background: linear-gradient(135deg, #002855 0%, #0A3D73 100%);
@@ -1508,12 +1571,22 @@ with tab_op:
         box-shadow: 0 6px 16px rgba(0, 40, 85, 0.18);
     ">
     <b>Criterios de clasificación de alertas:</b><br>
-    • <b>Aceptable:</b> diferencia absoluta menor o igual al MAE ($4.956.184)<br>
-    • <b>Moderado:</b> diferencia absoluta mayor al MAE y menor o igual a 2 × MAE ($7.188.811)"<br>
-    • <b>Crítico:</b> diferencia absoluta superior a 2 × MAE 
+    • <b>Aceptable:</b> error porcentual menor a 5%<br>
+    • <b>Moderado:</b> error porcentual entre 5% y 15%<br>
+    • <b>Crítico:</b> error porcentual mayor a 15%
     </div>
     """, unsafe_allow_html=True)
     
+    df_riesgo = (
+        df_alertas["Nivel de riesgo"]
+        .value_counts()
+        .reindex(["Aceptable", "Moderado", "Crítico"], fill_value=0)
+        .reset_index()
+    )
+    df_riesgo.columns = ["Nivel de riesgo", "Cantidad"]
+    df_riesgo["Porcentaje"] = (
+        df_riesgo["Cantidad"] / len(df_alertas) * 100
+    ).round(1).astype(str) + "%"
     
     color_map = {
         "Aceptable": "#2F6F68",
@@ -1541,6 +1614,7 @@ with tab_op:
         yaxis_title="Cantidad de vehículos",
         margin=dict(l=20, r=20, t=60, b=20)
     )
+    
     st.plotly_chart(fig_riesgo, use_container_width=True)
     
     opcion = st.selectbox(
@@ -1572,24 +1646,31 @@ with tab_op:
     
     columnas_mostrar = [
         "marca",
+        "modelo",
         "year",
         "Precio real",
         "Precio estimado",
         "Diferencia",
+        "Error porcentual",
         "Tipo de desvío",
         "Nivel de riesgo"
     ]
     
     df_filtrado = df_filtrado[columnas_mostrar].rename(columns={
         "marca": "Marca",
+        "modelo": "Modelo",
         "year": "Año",
-        "combustible": "Combustible",
-        "kilometraje": "Kilometraje"
+        "Error porcentual": "Error %"
     })
     
+    df_filtrado["Precio real"] = df_filtrado["Precio real"].round(0)
+    df_filtrado["Precio estimado"] = df_filtrado["Precio estimado"].round(0)
+    df_filtrado["Diferencia"] = df_filtrado["Diferencia"].round(0)
+    df_filtrado["Error %"] = df_filtrado["Error %"].round(1)
+    
     with st.expander("Ver datos"):
-        st.dataframe(df_filtrado, use_container_width=True)
-        
+        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+    
     st.markdown("""
     <div style="
         background: #FAFAF9;
@@ -1602,7 +1683,7 @@ with tab_op:
         line-height: 1.6;
     ">
     <b style="color:#002855;">Interpretación: </b><br>
-    <span>El modelo en su mayoría captura adecuadamente las tendencias generales de depreciación y tasación. Las publicaciones clasificadas como moderadas o críticas presentan una desviación relevante respecto del precio esperado por el modelo. Estas alertas deben revisarse para validar si corresponden a sobrevaloración, subvaloración, error de carga o condiciones especiales del vehículo.</span><br>
+    <span>Las publicaciones aceptables se mantienen cerca del precio esperado por el modelo. Las alertas moderadas y críticas muestran desvíos relevantes que pueden responder a sobrevaloración, subvaloración, errores de carga o características no observadas por el modelo.</span><br>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1618,7 +1699,6 @@ with tab_op:
         "sobrevaloradas, especialmente autos muy antiguos con precio alto | Frecuencia: Diario"
     )
     
-        
     df_alerta = df.dropna(subset=["year", "precio", "marca", "modelo"]).copy()
     
     anio_actual = pd.Timestamp.today().year
@@ -1628,7 +1708,6 @@ with tab_op:
     umbral_antiguedad = 8
     umbral_precio = df_alerta["precio"].quantile(0.75)
     
-    # Clasificación por cuadrante
     def clasificar_alerta(row):
         if row["antiguedad"] >= umbral_antiguedad and row["precio"] >= umbral_precio:
             return "Alerta de revisión"
@@ -1640,109 +1719,166 @@ with tab_op:
             return "Normal"
     
     df_alerta["cuadrante"] = df_alerta.apply(clasificar_alerta, axis=1)
-    df_alerta["label"] = df_alerta["marca"].str.title() + " " + df_alerta["modelo"].astype(str)
     
-    paleta = {
-        "Alerta de revisión": "#800020",
-        "Gama alta": "#002855",
-        "Observar": "#D9A441",
-        "Normal": "#D6D3D1"
-    }
-    
-    x_max = max(df_alerta["antiguedad"].max() + 1, umbral_antiguedad + 2)
-    y_max = df_alerta["precio"].max() * 1.08
-    
-    fig = px.scatter(
-        df_alerta,
-        x="antiguedad",
-        y="precio",
-        color="cuadrante",
-        color_discrete_map=paleta,
-        hover_data={
-            "marca": True,
-            "modelo": True,
-            "year": True,
-            "antiguedad": True,
-            "precio": ":,.0f",
-            "ciudad": True,
-            "cuadrante": True
-        },
-        title="Matriz de alertas: autos antiguos con precio alto"
+    # Agrupar por antigüedad y cuadrante
+    df_barras = (
+        df_alerta.groupby(["antiguedad", "cuadrante"], as_index=False)
+        .size()
+        .rename(columns={"size": "cantidad"})
     )
+    
+    # Serie base por cuadrante
+    orden_x = list(range(int(df_alerta["antiguedad"].min()), int(df_alerta["antiguedad"].max()) + 1))
+    
+    def serie_cuadrante(nombre):
+        base = pd.DataFrame({"antiguedad": orden_x})
+        temp = df_barras[df_barras["cuadrante"] == nombre][["antiguedad", "cantidad"]]
+        temp = base.merge(temp, on="antiguedad", how="left").fillna(0)
+        return temp
+    
+    normal = serie_cuadrante("Normal")
+    gama_alta = serie_cuadrante("Gama alta")
+    observar = serie_cuadrante("Observar")
+    revision = serie_cuadrante("Alerta de revisión")
+    
+    # Las categorías bajo precio se muestran negativas para formar la matriz visual
+    normal["valor_plot"] = -normal["cantidad"]
+    observar["valor_plot"] = -observar["cantidad"]
+    gama_alta["valor_plot"] = gama_alta["cantidad"]
+    revision["valor_plot"] = revision["cantidad"]
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        x=normal["antiguedad"],
+        y=normal["valor_plot"],
+        name="Normal",
+        marker_color="#9E9E9E",
+        width=0.32,
+        hovertemplate="<b>Antigüedad:</b> %{x} años<br><b>Normal:</b> %{customdata} publicaciones<extra></extra>",
+        customdata=normal["cantidad"]
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=gama_alta["antiguedad"],
+        y=gama_alta["valor_plot"],
+        name="Gama alta",
+        marker_color="#0B4F8A",
+        width=0.32,
+        hovertemplate="<b>Antigüedad:</b> %{x} años<br><b>Gama alta:</b> %{y} publicaciones<extra></extra>"
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=observar["antiguedad"],
+        y=observar["valor_plot"],
+        name="Observar",
+        marker_color="#E5A11A",
+        width=0.32,
+        hovertemplate="<b>Antigüedad:</b> %{x} años<br><b>Observar:</b> %{customdata} publicaciones<extra></extra>",
+        customdata=observar["cantidad"]
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=revision["antiguedad"],
+        y=revision["valor_plot"],
+        name="Alerta de revisión",
+        marker_color="#9E1B32",
+        width=0.32,
+        hovertemplate="<b>Antigüedad:</b> %{x} años<br><b>Alerta de revisión:</b> %{y} publicaciones<extra></extra>"
+    ))
+    
+    y_top = max(gama_alta["cantidad"].max(), revision["cantidad"].max(), 5)
+    y_bottom = -max(normal["cantidad"].max(), observar["cantidad"].max(), 5)
     
     # Fondos por cuadrante
     fig.add_shape(
-        type="rect", x0=0, x1=umbral_antiguedad, y0=0, y1=umbral_precio, #normal
-        fillcolor="#F5F5F4", line_width=0, layer="below"
+        type="rect",
+        x0=min(orden_x) - 0.5, x1=umbral_antiguedad,
+        y0=0, y1=y_top * 1.15,
+        fillcolor="#EEF4FB",
+        line_width=0,
+        layer="below"
     )
+    
     fig.add_shape(
-        type="rect", x0=umbral_antiguedad, x1=x_max, y0=0, y1=umbral_precio, #monitorear
-        fillcolor="#F7EFE8", line_width=0, layer="below"
+        type="rect",
+        x0=umbral_antiguedad, x1=max(orden_x) + 0.5,
+        y0=0, y1=y_top * 1.15,
+        fillcolor="#F8EAEA",
+        line_width=0,
+        layer="below"
     )
+    
     fig.add_shape(
-        type="rect", x0=0, x1=umbral_antiguedad, y0=umbral_precio, y1=y_max, #gama alta
-        fillcolor="#F4F8FC", line_width=0, layer="below"
+        type="rect",
+        x0=min(orden_x) - 0.5, x1=umbral_antiguedad,
+        y0=y_bottom * 1.15, y1=0,
+        fillcolor="#F2F2F2",
+        line_width=0,
+        layer="below"
     )
+    
     fig.add_shape(
-        type="rect", x0=umbral_antiguedad, x1=x_max, y0=umbral_precio, y1=y_max, #revisar
-        fillcolor="#F8EAEA", line_width=0, layer="below"
+        type="rect",
+        x0=umbral_antiguedad, x1=max(orden_x) + 0.5,
+        y0=y_bottom * 1.15, y1=0,
+        fillcolor="#FBF5E8",
+        line_width=0,
+        layer="below"
     )
     
     # Líneas de corte
     fig.add_vline(
         x=umbral_antiguedad,
         line_dash="dash",
-        line_color="#9CA3AF",
+        line_color="#B0B0B0",
         line_width=1.5
     )
     
     fig.add_hline(
-        y=umbral_precio,
+        y=0,
         line_dash="dash",
-        line_color="#9CA3AF",
+        line_color="#B0B0B0",
         line_width=1.5
     )
     
-    # Etiquetas de cuadrantes
+    # Etiquetas visuales
     fig.add_annotation(
-        x=umbral_antiguedad / 2,
-        y=umbral_precio * 0.5,
-        text="Normal",
+        x=(min(orden_x) + umbral_antiguedad) / 2,
+        y=y_top * 0.72,
+        text="<b>Gama alta</b><br><span style='font-size:11px'>(Precio alto y ≤ 8 años)</span>",
         showarrow=False,
-        font=dict(size=12, color="#6B7280")
+        font=dict(size=12, color="#0B4F8A")
     )
     
     fig.add_annotation(
-        x=(umbral_antiguedad + x_max) / 2,
-        y=umbral_precio * 0.5,
-        text="Observar",
+        x=(umbral_antiguedad + max(orden_x)) / 2,
+        y=y_top * 0.72,
+        text="<b>Alerta de revisión</b><br><span style='font-size:11px'>(Precio alto y > 8 años)</span>",
         showarrow=False,
-        font=dict(size=12, color="#6B7280")
+        font=dict(size=12, color="#9E1B32")
     )
     
     fig.add_annotation(
-        x=umbral_antiguedad / 2,
-        y=(umbral_precio + y_max) / 2,
-        text="Gama alta",
+        x=(min(orden_x) + umbral_antiguedad) / 2,
+        y=y_bottom * 0.72,
+        text="<b>Normal</b><br><span style='font-size:11px'>(Precio ≤ P75)</span>",
         showarrow=False,
-        font=dict(size=12, color="#6B7280")
+        font=dict(size=12, color="#7A7A7A")
     )
     
     fig.add_annotation(
-        x=(umbral_antiguedad + x_max) / 2,
-        y=(umbral_precio + y_max) / 2,
-        text="Alerta de revisión",
+        x=(umbral_antiguedad + max(orden_x)) / 2,
+        y=y_bottom * 0.72,
+        text=f"<b>Observar</b><br><span style='font-size:11px'>(Precio ≤ P75 y > {umbral_antiguedad} años)</span>",
         showarrow=False,
-        font=dict(size=12, color="#7F1D1D")
-    )
-    
-    fig.update_traces(
-        marker=dict(size=10, opacity=0.8, line=dict(width=0.6, color="white"))
+        font=dict(size=12, color="#C88700")
     )
     
     fig.update_layout(
+        barmode="overlay",
         template="plotly_white",
-        height=580,
+        height=620,
         title=dict(
             text="Matriz de alertas: autos antiguos con precio alto",
             x=0,
@@ -1751,7 +1887,7 @@ with tab_op:
         ),
         font=dict(family="Inter, sans-serif", color="#1F2937"),
         xaxis_title="Antigüedad del vehículo (años)",
-        yaxis_title="Precio",
+        yaxis_title="Cantidad de publicaciones",
         legend_title="Clasificación",
         plot_bgcolor="#FFFFFF",
         paper_bgcolor="#FFFFFF",
@@ -1759,17 +1895,23 @@ with tab_op:
     )
     
     fig.update_xaxes(
-        range=[0, x_max],
-        gridcolor="rgba(148, 163, 184, 0.18)",
+        tickmode="linear",
+        dtick=1,
+        gridcolor="rgba(148, 163, 184, 0.12)",
         tickfont=dict(color="#6B7280"),
         title_font=dict(color="#6B7280")
     )
     
     fig.update_yaxes(
-        range=[0, y_max],
-        tickprefix="$",
-        tickformat=",.0f",
-        gridcolor="rgba(148, 163, 184, 0.18)",
+        tickvals=[y_bottom, y_bottom/2, 0, y_top/2, y_top],
+        ticktext=[
+            f"{abs(int(y_bottom))}",
+            f"{abs(int(y_bottom/2))}",
+            f"${umbral_precio:,.0f}",
+            f"{int(y_top/2)}",
+            f"{int(y_top)}"
+        ],
+        gridcolor="rgba(148, 163, 184, 0.12)",
         tickfont=dict(color="#6B7280"),
         title_font=dict(color="#6B7280")
     )
@@ -1784,8 +1926,8 @@ with tab_op:
     )
     
     with st.expander("Ver autos en Alerta de revisión"):
-        st.dataframe(df_revision, use_container_width=True)
-        
+        st.dataframe(df_revision, use_container_width=True, hide_index=True)
+    
     st.markdown("""
     <div style="
         background: #FAFAF9;
@@ -1798,7 +1940,7 @@ with tab_op:
         line-height: 1.6;
     ">
     <b style="color:#002855;">Interpretación: </b><br>
-    <span>La matriz permite identificar rápidamente publicaciones fuera de comportamiento, priorizando la revisión de autos antiguos con precios altos y dejando para monitoreo aquellos casos que solo requieren observación.</span><br>
+    <span>La matriz resume la cantidad de publicaciones por antigüedad y clasifica visualmente cuáles pertenecen a un comportamiento normal, cuáles deben observarse y cuáles requieren revisión prioritaria por combinar mayor antigüedad con precios altos.</span><br>
     </div>
     """, unsafe_allow_html=True)
         
