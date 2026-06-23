@@ -716,13 +716,22 @@ with tab_inicio:
     
         st.markdown("""
         <div class="card">
-            <div class="card-title">Variables de precio</div>
-            <div class="card-item"><b>precio:</b> Precio publicado del vehículo.</div>
-            <div class="card-item"><b>categoria_precio:</b> Segmento o rango de precio.</div>
+            <div class="card-title">Contexto de mercado</div>
+            <div class="card-item"><b>combustible:</b> Tipo de combustible.</div>
+            <div class="card-item"><b>ciudad:</b> Ciudad de publicación.</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">Variables de precio</div>
+            <div class="card-item"><b>precio:</b> Precio publicado del vehículo.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+
         st.markdown("""
         <div class="card">
             <div class="card-title">Uso y estado del vehículo</div>
@@ -732,16 +741,7 @@ with tab_inicio:
         </div>
         """, unsafe_allow_html=True)
     
-        st.markdown("<br>", unsafe_allow_html=True)
-    
-        st.markdown("""
-        <div class="card">
-            <div class="card-title">Contexto de mercado</div>
-            <div class="card-item"><b>combustible:</b> Tipo de combustible.</div>
-            <div class="card-item"><b>ciudad:</b> Ciudad de publicación.</div>
-            <div class="card-item"><b>fecha_captura:</b> Fecha de captura del registro.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        
 # ==========================================
 # PESTAÑA 1: NIVEL ESTRATÉGICO
 # ==========================================
@@ -1092,7 +1092,21 @@ with tab_tac:
     fig.update_xaxes(showgrid=False)
     
     st.plotly_chart(fig, use_container_width=True)
-
+    st.markdown("""
+    <div style="
+        background: #FAFAF9;
+        border: 1px solid #D6E2F0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        color: #002855;
+        font-size: 0.96rem;
+        line-height: 1.6;
+    ">
+    <b style="color:#002855;">Interpretación: </b><br>
+    <span>El tipo de combustible tiene un impacto directo y diferenciado sobre el precio según el nivel de uso del vehículo.  En todos los tipos de combustible, el paso del rango Bajo al Alto implica una caída significativa de precio, confirmando que el nivel de uso es un factor de depreciación transversal, independiente del tipo de motor.</span><br>
+    </div>
+    """, unsafe_allow_html=True)
     st.write(" ")
     st.divider()
     # =========================
