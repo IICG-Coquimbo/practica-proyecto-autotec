@@ -10,7 +10,12 @@ from pathlib import Path
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # 1. Configuración de la página
 st.set_page_config(page_title="Dashboard Automotriz Ejecutivo", layout="wide")
@@ -1107,6 +1112,7 @@ with tab_tac:
     <span>El tipo de combustible tiene un impacto directo y diferenciado sobre el precio según el nivel de uso del vehículo.  En todos los tipos de combustible, el paso del rango Bajo al Alto implica una caída significativa de precio, confirmando que el nivel de uso es un factor de depreciación transversal, independiente del tipo de motor.</span><br>
     </div>
     """, unsafe_allow_html=True)
+    
     st.write(" ")
     st.divider()
     # =========================
@@ -1417,71 +1423,107 @@ with tab_op:
     # ============================
     # KPI 1
     # ============================    
+    
     st.header("1. Alertas de publicaciones fuera de rango estimado")
     st.caption(
         "KPI: Desviación entre precio real y precio estimado | Objetivo: Detectar vehículos cuyo precio publicado se desvía significativamente "
         "del valor esperado según un modelo de predicción | Frecuencia: diaria."
     )
-    columnas_modelo = ["kilometraje", "year", "marca", "combustible", "precio"]
-    df_modelo = df[columnas_modelo].dropna().copy()
     
-    X = df_modelo[["kilometraje", "year", "marca", "combustible"]]
-    X = pd.get_dummies(X, columns=["marca", "combustible"], drop_first=True)
-    X = X.astype(float)   
-    y = df_modelo["precio"].astype(float).values
-    X_b = np.c_[np.ones((len(X), 1)), X.values]
-    theta_best = np.linalg.inv(X_b.T.dot(X_b)).dot(X_b.T).dot(y)
-    y_pred = X_b.dot(theta_best)
-
-    errores = y - y_pred
-    errores_abs = np.abs(errores)
+    columnas_modelo = [
+        "marca", "modelo", "year", "kilometraje", "combustible", "ciudad",
+        "uso_anual_estimado", "rango_kilometraje", "precio"
+    ]
     
-    mae = np.mean(errores_abs)
-    rmse = np.sqrt(np.mean(errores ** 2))
-
-    st.write("Este KPI utiliza modelo de regresión para estimar el precio esperado de cada vehículo a partir de sus características principales: kilometraje, año, marca y tipo de combustible.")
-    st.write("Luego compara el precio real publicado con el precio estimado por el modelo. La diferencia entre ambos permite detectar publicaciones potencialmente fuera de rango, ya sea por sobrevaloración o subvaloración.")
-
+    df_modelo = df[columnas_modelo].dropna(subset=["precio", "marca", "modelo", "year", "kilometraje"]).copy()
+    
+    anio_actual = pd.Timestamp.today().year
+    df_modelo["antiguedad"] = anio_actual - df_modelo["year"]
+    df_modelo["precio_log"] = np.log1p(df_modelo["precio"])
+    
+    features = [
+        "marca", "modelo", "combustible", "ciudad", "rango_kilometraje",
+        "year", "kilometraje", "uso_anual_estimado", "antiguedad"
+    ]
+    
+    X = df_modelo[features].copy()
+    y = df_modelo["precio_log"].copy()
+    
+    cat_features = ["marca", "modelo", "combustible", "ciudad", "rango_kilometraje"]
+    num_features = ["year", "kilometraje", "uso_anual_estimado", "antiguedad"]
+    
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", Pipeline([
+                ("imputer", SimpleImputer(strategy="median"))
+            ]), num_features),
+            ("cat", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore"))
+            ]), cat_features)
+        ]
+    )
+    
+    modelo = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("model", RandomForestRegressor(
+            n_estimators=250,
+            max_depth=14,
+            min_samples_split=8,
+            min_samples_leaf=3,
+            random_state=42,
+            n_jobs=-1
+        ))
+    ])
+    
+    modelo.fit(X, y)
+    y_pred_log = modelo.predict(X)
+    y_pred = np.expm1(y_pred_log)
+    
     df_alertas = df_modelo.copy()
-    df_alertas["Precio real"] = y
+    df_alertas["Precio real"] = df_alertas["precio"]
     df_alertas["Precio estimado"] = y_pred
     df_alertas["Diferencia"] = df_alertas["Precio real"] - df_alertas["Precio estimado"]
     df_alertas["Diferencia absoluta"] = np.abs(df_alertas["Diferencia"])
+    df_alertas["Error porcentual"] = (
+        df_alertas["Diferencia absoluta"] / df_alertas["Precio estimado"].clip(lower=1)
+    ) * 100
     
-    umbral_aceptable = mae
-    umbral_moderado = 2 * mae
+    mae = mean_absolute_error(df_alertas["Precio real"], df_alertas["Precio estimado"])
+    rmse = np.sqrt(mean_squared_error(df_alertas["Precio real"], df_alertas["Precio estimado"]))
+    r2 = r2_score(df_alertas["Precio real"], df_alertas["Precio estimado"])
     
-    def clasificar_riesgo(diff_abs):
-        if diff_abs <= umbral_aceptable:
+    def clasificar_riesgo(row):
+        err_pct = row["Error porcentual"]
+    
+        if err_pct < 5:
             return "Aceptable"
-        elif diff_abs <= umbral_moderado:
+        elif err_pct <= 15:
             return "Moderado"
         else:
             return "Crítico"
     
-    df_alertas["Nivel de riesgo"] = df_alertas["Diferencia absoluta"].apply(clasificar_riesgo)
+    df_alertas["Nivel de riesgo"] = df_alertas.apply(clasificar_riesgo, axis=1)
     
     df_alertas["Tipo de desvío"] = df_alertas["Diferencia"].apply(
         lambda x: "Sobrevalorado" if x > 0 else "Subvalorado"
     )
-
-    fuera_rango = (df_alertas["Nivel de riesgo"] != "Aceptable").mean() * 100
-    df_riesgo = (
-        df_alertas["Nivel de riesgo"]
-        .value_counts()
-        .reindex(["Aceptable", "Moderado", "Crítico"], fill_value=0)
-        .reset_index()
+    
+    st.write(
+        "Este KPI utiliza un modelo predictivo para estimar el precio esperado de cada vehículo considerando marca, modelo, año, kilometraje, combustible, ciudad y nivel de uso."
+    )
+    st.write(
+        "Luego compara el precio real con el estimado y clasifica la publicación según su error porcentual, lo que permite detectar alertas comerciales de manera más realista."
     )
     
-    df_riesgo.columns = ["Nivel de riesgo", "Cantidad"]
-    df_riesgo["Porcentaje"] = (df_riesgo["Cantidad"] / len(df_alertas) * 100).round(1).astype(str) + "%"
-
-    st.header("Métricas del modelo de predicción")   
+    st.subheader("Métricas del modelo")
+    
     total_criticos = (df_alertas["Nivel de riesgo"] == "Crítico").sum()
     total_moderados = (df_alertas["Nivel de riesgo"] == "Moderado").sum()
     porc_fuera_rango = (df_alertas["Nivel de riesgo"] != "Aceptable").mean() * 100
-    porc_sobrevalorados = (df_alertas["Diferencia"] > 0).mean() * 100    
-    col1, col2, col3 = st.columns(3)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
         st.markdown(f"""
         <div class="kpi-card">
@@ -1501,15 +1543,22 @@ with tab_op:
     with col3:
         st.markdown(f"""
         <div class="kpi-card">
-            <div class="kpi-label">Alertas moderadas</div>
-            <div class="kpi-value">{f"{total_moderados:,}".replace(",", ".")}</div>
+            <div class="kpi-label">MAE</div>
+            <div class="kpi-value">${mae:,.0f}</div>
         </div>
         """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-label">R² del modelo</div>
+            <div class="kpi-value">{r2:.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.write(" ")
+    st.write(" ")
 
-    st.write("    ")
-    st.write("- MAE(Error Absoluto Promedio): La magnitud promedio de los errores en el conjunto de predicciones, en pesos.")
-        
-    st.write("   ")     
     st.markdown("""
     <div style="
         background: linear-gradient(135deg, #002855 0%, #0A3D73 100%);
@@ -1522,12 +1571,22 @@ with tab_op:
         box-shadow: 0 6px 16px rgba(0, 40, 85, 0.18);
     ">
     <b>Criterios de clasificación de alertas:</b><br>
-    • <b>Aceptable:</b> diferencia absoluta menor o igual al MAE ($4.956.184)<br>
-    • <b>Moderado:</b> diferencia absoluta mayor al MAE y menor o igual a 2 × MAE ($7.188.811)"<br>
-    • <b>Crítico:</b> diferencia absoluta superior a 2 × MAE 
+    • <b>Aceptable:</b> error porcentual menor a 5%<br>
+    • <b>Moderado:</b> error porcentual entre 5% y 15%<br>
+    • <b>Crítico:</b> error porcentual mayor a 15%
     </div>
     """, unsafe_allow_html=True)
     
+    df_riesgo = (
+        df_alertas["Nivel de riesgo"]
+        .value_counts()
+        .reindex(["Aceptable", "Moderado", "Crítico"], fill_value=0)
+        .reset_index()
+    )
+    df_riesgo.columns = ["Nivel de riesgo", "Cantidad"]
+    df_riesgo["Porcentaje"] = (
+        df_riesgo["Cantidad"] / len(df_alertas) * 100
+    ).round(1).astype(str) + "%"
     
     color_map = {
         "Aceptable": "#2F6F68",
@@ -1555,6 +1614,7 @@ with tab_op:
         yaxis_title="Cantidad de vehículos",
         margin=dict(l=20, r=20, t=60, b=20)
     )
+    
     st.plotly_chart(fig_riesgo, use_container_width=True)
     
     opcion = st.selectbox(
@@ -1586,24 +1646,31 @@ with tab_op:
     
     columnas_mostrar = [
         "marca",
+        "modelo",
         "year",
         "Precio real",
         "Precio estimado",
         "Diferencia",
+        "Error porcentual",
         "Tipo de desvío",
         "Nivel de riesgo"
     ]
     
     df_filtrado = df_filtrado[columnas_mostrar].rename(columns={
         "marca": "Marca",
+        "modelo": "Modelo",
         "year": "Año",
-        "combustible": "Combustible",
-        "kilometraje": "Kilometraje"
+        "Error porcentual": "Error %"
     })
     
+    df_filtrado["Precio real"] = df_filtrado["Precio real"].round(0)
+    df_filtrado["Precio estimado"] = df_filtrado["Precio estimado"].round(0)
+    df_filtrado["Diferencia"] = df_filtrado["Diferencia"].round(0)
+    df_filtrado["Error %"] = df_filtrado["Error %"].round(1)
+    
     with st.expander("Ver datos"):
-        st.dataframe(df_filtrado, use_container_width=True)
-        
+        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
+    
     st.markdown("""
     <div style="
         background: #FAFAF9;
@@ -1616,7 +1683,7 @@ with tab_op:
         line-height: 1.6;
     ">
     <b style="color:#002855;">Interpretación: </b><br>
-    <span>El modelo en su mayoría captura adecuadamente las tendencias generales de depreciación y tasación. Las publicaciones clasificadas como moderadas o críticas presentan una desviación relevante respecto del precio esperado por el modelo. Estas alertas deben revisarse para validar si corresponden a sobrevaloración, subvaloración, error de carga o condiciones especiales del vehículo.</span><br>
+    <span>Las publicaciones aceptables se mantienen cerca del precio esperado por el modelo. Las alertas moderadas y críticas muestran desvíos relevantes que pueden responder a sobrevaloración, subvaloración, errores de carga o características no observadas por el modelo.</span><br>
     </div>
     """, unsafe_allow_html=True)
 
